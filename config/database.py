@@ -4,35 +4,23 @@ from mysql.connector import Error
 
 
 class Database:
-    def __init__(self):
-        self.host = "localhost"
-        self.user = "root"
-        self.password = ""
-        self.database = "sistem_informasi_klinik"
-        self.connection = None
+    HOST = "localhost"
+    USER = "root"
+    PASSWORD = ""
+    DATABASE = "sistem_informasi_klinik"
 
-    def connect(self):
+    @staticmethod
+    def get_connection():
         try:
-            self.connection = mysql.connector.connect(
-                host=self.host,
-                user=self.user,
-                password=self.password,
-                database=self.database
+            connection = mysql.connector.connect(
+                host=Database.HOST,
+                user=Database.USER,
+                password=Database.PASSWORD,
+                database=Database.DATABASE
             )
 
-            if self.connection.is_connected():
-                print("Berhasil terhubung ke database MySQL.")
-                return self.connection
+            return connection
 
         except Error as e:
-            print(f"Gagal terhubung ke database: {e}")
+            print(f"Koneksi database gagal: {e}")
             return None
-
-    def disconnect(self):
-        if self.connection and self.connection.is_connected():
-            self.connection.close()
-            print("Koneksi database ditutup.")
-
-
-# Membuat objek database
-db = Database()
