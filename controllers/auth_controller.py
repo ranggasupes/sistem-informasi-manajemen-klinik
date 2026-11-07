@@ -27,4 +27,11 @@ class AuthController:
         if not hmac.compare_digest(password_hash, user["password"]):
             return False, "Password yang dimasukkan salah."
 
-        return True, user["role"]
+        # Mengembalikan seluruh identitas pengguna
+        user_login = {
+            "id_user": user["id_user"],
+            "username": user["username"],
+            "role": user["role"]
+        }
+
+        return True, user_login

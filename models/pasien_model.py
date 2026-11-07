@@ -102,3 +102,44 @@ class PasienModel:
             if cursor:
                 cursor.close()
             connection.close()
+
+            
+    def get_pasien_by_user_id(self, id_user):
+        connection = Database.get_connection()
+
+        if connection is None:
+            return None
+
+        cursor = None
+
+        try:
+            cursor = connection.cursor(dictionary=True)
+
+            query = """
+                SELECT
+                    id_pasien,
+                    id_user,
+                    nomor_bpjs,
+                    nik,
+                    nama_pasien,
+                    jenis_kelamin,
+                    tanggal_lahir,
+                    alamat,
+                    no_telepon
+                FROM pasien
+                WHERE id_user = %s
+                LIMIT 1
+            """
+
+            cursor.execute(query, (id_user,))
+            return cursor.fetchone()
+
+        except Exception as e:
+            print(f"Error mengambil profil pasien: {e}")
+            return None
+
+        finally:
+            if cursor:
+                cursor.close()
+            connection.close()
+

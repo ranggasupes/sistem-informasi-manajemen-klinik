@@ -3,6 +3,11 @@ import customtkinter as ctk
 from tkinter import messagebox
 
 from controllers.auth_controller import AuthController
+from views.dashboard_view import (
+    DashboardAdminFrame,
+    DashboardDokterFrame,
+    DashboardPasienFrame
+)
 
 
 class LoginView(ctk.CTk):
@@ -11,15 +16,26 @@ class LoginView(ctk.CTk):
         super().__init__()
 
         self.auth_controller = AuthController()
+        self.current_user = None
 
-        self.title("Login - Sistem Informasi Klinik")
+        self.title("Sistem Informasi Manajemen Klinik")
         self.geometry("900x550")
         self.resizable(False, False)
 
         ctk.set_appearance_mode("light")
         ctk.set_default_color_theme("blue")
 
-        # Frame utama
+        self.tampilkan_form_login()
+
+    def tampilkan_form_login(self):
+
+        for widget in self.winfo_children():
+            widget.destroy()
+
+        self.current_user = None
+        self.geometry("900x550")
+        self.resizable(False, False)
+
         self.frame_login = ctk.CTkFrame(
             self,
             width=400,
@@ -34,22 +50,18 @@ class LoginView(ctk.CTk):
 
         self.frame_login.pack_propagate(False)
 
-        # Judul
-        self.label_judul = ctk.CTkLabel(
+        ctk.CTkLabel(
             self.frame_login,
             text="KLINIK SEHAT",
             font=("Arial", 26, "bold")
-        )
-        self.label_judul.pack(pady=(35, 5))
+        ).pack(pady=(35, 5))
 
-        self.label_subjudul = ctk.CTkLabel(
+        ctk.CTkLabel(
             self.frame_login,
             text="Sistem Informasi Manajemen Klinik",
             font=("Arial", 13)
-        )
-        self.label_subjudul.pack(pady=(0, 25))
+        ).pack(pady=(0, 25))
 
-        # Input username
         self.entry_username = ctk.CTkEntry(
             self.frame_login,
             width=300,
@@ -58,7 +70,6 @@ class LoginView(ctk.CTk):
         )
         self.entry_username.pack(pady=10)
 
-        # Input password
         self.entry_password = ctk.CTkEntry(
             self.frame_login,
             width=300,
@@ -68,7 +79,6 @@ class LoginView(ctk.CTk):
         )
         self.entry_password.pack(pady=10)
 
-        # Tombol login
         self.btn_login = ctk.CTkButton(
             self.frame_login,
             text="LOGIN",
@@ -78,12 +88,11 @@ class LoginView(ctk.CTk):
         )
         self.btn_login.pack(pady=25)
 
-        self.label_footer = ctk.CTkLabel(
+        ctk.CTkLabel(
             self.frame_login,
             text="Sistem Informasi Manajemen Klinik",
             font=("Arial", 11)
-        )
-        self.label_footer.pack(pady=5)
+        ).pack(pady=5)
 
         self.entry_username.focus()
 
@@ -97,44 +106,66 @@ class LoginView(ctk.CTk):
             password
         )
 
-        if berhasil:
-            messagebox.showinfo(
-                "Login Berhasil",
-                f"Selamat datang!\nRole: {hasil}"
-            )
+        if not berhasil:
+            messagebox.showerror("Login Gagal", hasil)
+            return
 
-            self.tampilkan_halaman_berhasil(username, hasil)
+        self.tampilkan_dashboard(username, hasil)
 
-        else:
-            messagebox.showerror(
-                "Login Gagal",
-                hasil
-            )
-
-    def tampilkan_halaman_berhasil(self, username, role):
+    def tampilkan_dashboard(self, username, user):
 
         for widget in self.winfo_children():
             widget.destroy()
 
-        self.geometry("900x550")
+        self.geometry("1100x650")
+        self.resizable(True, True)
 
-        label = ctk.CTkLabel(
-            self,
-            text=f"Selamat datang, {username}!",
-            font=("Arial", 25, "bold")
-        )
-        label.pack(pady=40)
+        self.current_user = user
+        role = user["role"]
 
-        label_role = ctk.CTkLabel(
-            self,
-            text=f"Anda login sebagai: {role}",
-            font=("Arial", 16)
-        )
-        label_role.pack(pady=10)
+        if role == "pasien":
+           dashboard = DashboardPasienFrame(
+    self,
+    username=username,
+    id_user=user["id_user"],
+    on_logout=self.logout
+)
 
-        label_info = ctk.CTkLabel(
-            self,
-            text="Login berhasil. Halaman dashboard akan dibuat berikutnya.",
-            font=("Arial", 14)
+        elif role == "dokter":
+            dashboard = DashboardDokterFrame(
+                self,
+                username=username,
+                on_logout=self.logout
+            )
+
+        elif role == "apoteker_admin":
+            dashboard = DashboardAdminFrame(
+                self,
+                username=username,
+                on_logout=self.logout
+            )
+
+        else:
+            messagebox.showerror(
+                "Role Tidak Dikenali",
+                f"Role {role} tidak tersedia."
+            )
+            self.tampilkan_form_login()
+            return
+
+        dashboard.pack(fill="both", expand=True)
+
+    def logout(self):
+
+        konfirmasi = messagebox.askyesno(
+            "Logout",
+            "Apakah Anda yakin ingin keluar?"
         )
-        label_info.pack(pady=20)
+
+        if konfirmasi:
+            self.tampilkan_form_login()
+
+
+if __name__ == "__main__":
+    app = LoginView()
+    app.mainloop()
