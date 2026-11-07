@@ -3,12 +3,10 @@ import sys
 from tkinter import ttk, messagebox
 import customtkinter as ctk
 
-# Menyesuaikan sys.path agar impor modul controllers aman
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from controllers.obat_controller import ObatController
 
-# 1. Atur mode tampilan ke Terang (Light Mode)
 ctk.set_appearance_mode("Light")
 ctk.set_default_color_theme("blue")
 
@@ -20,13 +18,10 @@ class ObatView(ctk.CTk):
         self.title("SIM Klinik - Kelola Data Obat")
         self.geometry("1000x600")
         self.resizable(True, True)
-
-        # 2. Latar belakang utama window (putih abu-abu terang)
         self.configure(fg_color="#f4f5f7")
 
         self.selected_id = None
 
-        # Layout Grid
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=2)
         self.grid_rowconfigure(0, weight=1)
@@ -36,8 +31,7 @@ class ObatView(ctk.CTk):
         self.load_data()
 
     def setup_form_ui(self):
-        """Form Input (Panel Kiri) dengan latar kartu abu-abu terang"""
-        # 3. fg_color="#d9d9d9" disesuaikan dengan kartu abu-abu pada gambar referensi
+        """Form Input khusus field database: nama_obat, jenis_obat, satuan, stok"""
         self.form_frame = ctk.CTkFrame(self, corner_radius=12, fg_color="#d9d9d9")
         self.form_frame.grid(row=0, column=0, padx=15, pady=15, sticky="nsew")
 
@@ -49,7 +43,7 @@ class ObatView(ctk.CTk):
         )
         lbl_title.pack(pady=(20, 15), padx=20, anchor="w")
 
-        # 4. Entry input berlatar belakang putih dengan teks hitam
+        # Field 1: nama_obat
         self.ent_nama = ctk.CTkEntry(
             self.form_frame, 
             placeholder_text="Nama Obat",
@@ -59,15 +53,17 @@ class ObatView(ctk.CTk):
         )
         self.ent_nama.pack(fill="x", padx=20, pady=6)
 
-        self.opt_kategori = ctk.CTkOptionMenu(
+        # Field 2: jenis_obat
+        self.opt_jenis = ctk.CTkOptionMenu(
             self.form_frame, 
             values=["Obat Bebas", "Obat Keras", "Sirup", "Tablet/Kapsul", "Salep", "Alkes"],
             fg_color="#3b82f6",
             button_color="#2563eb",
             text_color="#ffffff"
         )
-        self.opt_kategori.pack(fill="x", padx=20, pady=6)
+        self.opt_jenis.pack(fill="x", padx=20, pady=6)
 
+        # Field 3: satuan
         self.ent_satuan = ctk.CTkEntry(
             self.form_frame, 
             placeholder_text="Satuan (Strip/Botol/Pcs)",
@@ -77,6 +73,7 @@ class ObatView(ctk.CTk):
         )
         self.ent_satuan.pack(fill="x", padx=20, pady=6)
 
+        # Field 4: stok
         self.ent_stok = ctk.CTkEntry(
             self.form_frame, 
             placeholder_text="Jumlah Stok",
@@ -89,7 +86,6 @@ class ObatView(ctk.CTk):
         btn_frame = ctk.CTkFrame(self.form_frame, fg_color="transparent")
         btn_frame.pack(fill="x", padx=20, pady=(15, 20))
 
-        # Warna tombol tetap asli
         btn_tambah = ctk.CTkButton(btn_frame, text="Tambah Data", command=self.tambah_data, fg_color="#28a745", hover_color="#218838")
         btn_tambah.pack(fill="x", pady=4)
 
@@ -103,7 +99,7 @@ class ObatView(ctk.CTk):
         btn_clear.pack(fill="x", pady=4)
 
     def setup_table_ui(self):
-        """Tabel Data & Search (Panel Kanan)"""
+        """Tabel Data & Pencarian"""
         self.table_frame = ctk.CTkFrame(self, corner_radius=12, fg_color="#d9d9d9")
         self.table_frame.grid(row=0, column=1, padx=(0, 15), pady=15, sticky="nsew")
 
@@ -112,7 +108,7 @@ class ObatView(ctk.CTk):
 
         self.ent_search = ctk.CTkEntry(
             search_frame, 
-            placeholder_text="Cari Obat...", 
+            placeholder_text="Cari Obat / Jenis...", 
             width=250,
             fg_color="#ffffff",
             text_color="#000000",
@@ -126,7 +122,7 @@ class ObatView(ctk.CTk):
         btn_reset = ctk.CTkButton(search_frame, text="Refresh", command=self.load_data, width=80, fg_color="#17a2b8")
         btn_reset.pack(side="left")
 
-        # 5. Style Treeview disesuaikan untuk Mode Terang
+        # Treeview Style
         style = ttk.Style()
         style.theme_use("clam")
         style.configure(
@@ -145,18 +141,18 @@ class ObatView(ctk.CTk):
             font=('Arial', 10, 'bold')
         )
 
-        columns = ("id", "nama", "kategori", "satuan", "stok")
+        columns = ("id_obat", "nama_obat", "jenis_obat", "satuan", "stok")
         self.tree = ttk.Treeview(self.table_frame, columns=columns, show="headings")
 
-        self.tree.heading("id", text="ID")
-        self.tree.heading("nama", text="Nama Obat")
-        self.tree.heading("kategori", text="Kategori")
+        self.tree.heading("id_obat", text="ID")
+        self.tree.heading("nama_obat", text="Nama Obat")
+        self.tree.heading("jenis_obat", text="Jenis Obat")
         self.tree.heading("satuan", text="Satuan")
         self.tree.heading("stok", text="Stok")
 
-        self.tree.column("id", width=50, anchor="center")
-        self.tree.column("nama", width=200)
-        self.tree.column("kategori", width=120)
+        self.tree.column("id_obat", width=50, anchor="center")
+        self.tree.column("nama_obat", width=200)
+        self.tree.column("jenis_obat", width=120)
         self.tree.column("satuan", width=100)
         self.tree.column("stok", width=80, anchor="center")
 
@@ -169,13 +165,15 @@ class ObatView(ctk.CTk):
 
         try:
             data = ObatController.get_all_obat()
-            if data is None:
-                messagebox.showerror("Koneksi Gagal", "Gagal terhubung ke MySQL! Pastikan XAMPP/MySQL sudah dinyalakan.")
-                return
-
             for row in data:
                 if isinstance(row, dict):
-                    values = (row.get('id'), row.get('nama_obat'), row.get('kategori'), row.get('satuan', '-'), row.get('stok'))
+                    values = (
+                        row.get('id_obat'), 
+                        row.get('nama_obat'), 
+                        row.get('jenis_obat'), 
+                        row.get('satuan', '-'), 
+                        row.get('stok')
+                    )
                 else:
                     values = row
                 self.tree.insert("", "end", values=values)
@@ -184,7 +182,7 @@ class ObatView(ctk.CTk):
 
     def tambah_data(self):
         nama = self.ent_nama.get().strip()
-        kategori = self.opt_kategori.get()
+        jenis = self.opt_jenis.get()
         satuan = self.ent_satuan.get().strip()
         stok = self.ent_stok.get().strip()
 
@@ -192,7 +190,7 @@ class ObatView(ctk.CTk):
             messagebox.showwarning("Peringatan", "Nama Obat dan Stok wajib diisi!")
             return
 
-        success = ObatController.tambah_obat(nama, kategori, satuan, int(stok))
+        success = ObatController.tambah_obat(nama, jenis, satuan, int(stok))
         if success:
             messagebox.showinfo("Sukses", "Data obat berhasil ditambahkan!")
             self.clear_form()
@@ -206,11 +204,11 @@ class ObatView(ctk.CTk):
             return
 
         nama = self.ent_nama.get().strip()
-        kategori = self.opt_kategori.get()
+        jenis = self.opt_jenis.get()
         satuan = self.ent_satuan.get().strip()
         stok = self.ent_stok.get().strip()
 
-        success = ObatController.update_obat(self.selected_id, nama, kategori, satuan, int(stok))
+        success = ObatController.update_obat(self.selected_id, nama, jenis, satuan, int(stok))
         if success:
             messagebox.showinfo("Sukses", "Data obat berhasil diperbarui!")
             self.clear_form()
@@ -244,7 +242,13 @@ class ObatView(ctk.CTk):
         results = ObatController.cari_obat(keyword)
         for row in results:
             if isinstance(row, dict):
-                values = (row.get('id'), row.get('nama_obat'), row.get('kategori'), row.get('satuan', '-'), row.get('stok'))
+                values = (
+                    row.get('id_obat'), 
+                    row.get('nama_obat'), 
+                    row.get('jenis_obat'), 
+                    row.get('satuan', '-'), 
+                    row.get('stok')
+                )
             else:
                 values = row
             self.tree.insert("", "end", values=values)
@@ -259,7 +263,7 @@ class ObatView(ctk.CTk):
         self.clear_form(reset_selection=False)
 
         self.ent_nama.insert(0, values[1])
-        self.opt_kategori.set(values[2])
+        self.opt_jenis.set(values[2])
         self.ent_satuan.insert(0, values[3])
         self.ent_stok.insert(0, values[4])
 
@@ -269,6 +273,6 @@ class ObatView(ctk.CTk):
         self.ent_nama.delete(0, "end")
         self.ent_satuan.delete(0, "end")
         self.ent_stok.delete(0, "end")
-        self.opt_kategori.set("Obat Bebas")
+        self.opt_jenis.set("Obat Bebas")
 
 
