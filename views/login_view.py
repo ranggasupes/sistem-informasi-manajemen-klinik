@@ -124,24 +124,29 @@ class LoginView(ctk.CTk):
         role = user["role"]
 
         if role == "pasien":
-           dashboard = DashboardPasienFrame(
-    self,
-    username=username,
-    id_user=user["id_user"],
-    on_logout=self.logout
-)
+
+            dashboard = DashboardPasienFrame(
+                self,
+                username=username,
+                id_user=user["id_user"],
+                on_logout=self.logout
+            )
 
         elif role == "dokter":
+
             dashboard = DashboardDokterFrame(
                 self,
                 username=username,
+                id_user=user["id_user"],
                 on_logout=self.logout
             )
 
         elif role == "apoteker_admin":
+
             dashboard = DashboardAdminFrame(
                 self,
                 username=username,
+                id_user=user["id_user"],
                 on_logout=self.logout
             )
 

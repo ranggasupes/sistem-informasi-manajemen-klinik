@@ -1,196 +1,266 @@
-import mysql.connector
+
 from config.database import Database
 
 
 def get_db_connection():
-    """Fungsi wrapper agar kompatibel dengan unittest (mocking pada tests/test_obat.py)."""
+    """Mengambil koneksi database."""
     return Database.get_connection()
 
 
 class ObatModel:
-    """
-    Model class yang bertanggung jawab untuk semua transaksi database (CRUD & Search)
-    pada tabel 'obat'.
-    """
 
     @staticmethod
     def tambah_obat(*args, **kwargs):
-        """Menambahkan data obat baru ke tabel 'obat'."""
         conn = get_db_connection()
-        if not conn:
+
+        if conn is None:
             return False
+
+        cursor = None
 
         try:
             cursor = conn.cursor()
-            if len(args) == 4:
-                query = "INSERT INTO obat (nama_obat, kategori, satuan, stok) VALUES (%s, %s, %s, %s)"
-                cursor.execute(query, args)
-            elif len(args) == 6:
-                query = "INSERT INTO obat (kode_obat, nama_obat, kategori, stok, harga, tgl_kadaluarsa) VALUES (%s, %s, %s, %s, %s, %s)"
-                cursor.execute(query, args)
-            elif len(args) > 0:
-                placeholders = ", ".join(["%s"] * len(args))
-                query = f"INSERT INTO obat VALUES ({placeholders})"
-                cursor.execute(query, args)
+
+            if len(args) >= 4:
+                nama, jenis, satuan, stok = args[:4]
             else:
                 nama = kwargs.get("nama_obat", "")
-                kategori = kwargs.get("kategori", "")
+                jenis = kwargs.get(
+                    "jenis_obat",
+                    kwargs.get("kategori", "")
+                )
                 satuan = kwargs.get("satuan", "")
                 stok = kwargs.get("stok", 0)
-                query = "INSERT INTO obat (nama_obat, kategori, satuan, stok) VALUES (%s, %s, %s, %s)"
-                cursor.execute(query, (nama, kategori, satuan, stok))
+
+            query = """
+                INSERT INTO obat (
+                    nama_obat,
+                    jenis_obat,
+                    satuan,
+                    stok
+                )
+                VALUES (%s, %s, %s, %s)
+            """
+
+            cursor.execute(
+                query,
+                (nama, jenis, satuan, stok)
+            )
 
             conn.commit()
             return True
-        except Exception as err:
-            if conn:
-                try:
-                    conn.rollback()
-                except Exception:
-                    pass
+
+        except Exception as e:
+            print(f"Error menambahkan obat: {e}")
+            conn.rollback()
             return False
+
         finally:
-            if conn:
-                try:
-                    cursor.close()
-                    conn.close()
-                except Exception:
-                    pass
+            if cursor:
+                cursor.close()
+            conn.close()
 
     @staticmethod
     def update_obat(*args, **kwargs):
-        """Memperbarui record obat."""
         conn = get_db_connection()
-        if not conn:
+
+        if conn is None:
             return False
+
+        cursor = None
 
         try:
             cursor = conn.cursor()
-            if len(args) == 5:
-                query = "UPDATE obat SET nama_obat=%s, kategori=%s, satuan=%s, stok=%s WHERE id=%s"
-                cursor.execute(query, (args[1], args[2], args[3], args[4], args[0]))
-            elif len(args) == 7:
-                query = "UPDATE obat SET kode_obat=%s, nama_obat=%s, kategori=%s, stok=%s, harga=%s, tgl_kadaluarsa=%s WHERE id=%s"
-                cursor.execute(query, (args[1], args[2], args[3], args[4], args[5], args[6], args[0]))
-            elif len(args) > 0:
-                query = "UPDATE obat SET nama_obat=%s WHERE id=%s"
-                cursor.execute(query, (args[1] if len(args) > 1 else "", args[0]))
+
+            if len(args) >= 5:
+                obat_id, nama, jenis, satuan, stok = args[:5]
+            else:
+                obat_id = kwargs.get("id_obat")
+                nama = kwargs.get("nama_obat", "")
+                jenis = kwargs.get(
+                    "jenis_obat",
+                    kwargs.get("kategori", "")
+                )
+                satuan = kwargs.get("satuan", "")
+                stok = kwargs.get("stok", 0)
+
+            query = """
+                UPDATE obat
+                SET nama_obat = %s,
+                    jenis_obat = %s,
+                    satuan = %s,
+                    stok = %s
+                WHERE id_obat = %s
+            """
+
+            cursor.execute(
+                query,
+                (nama, jenis, satuan, stok, obat_id)
+            )
+
             conn.commit()
-            return True
-        except Exception as err:
-            if conn:
-                try:
-                    conn.rollback()
-                except Exception:
-                    pass
+            return cursor.rowcount > 0
+
+        except Exception as e:
+            print(f"Error memperbarui obat: {e}")
+            conn.rollback()
             return False
+
         finally:
-            if conn:
-                try:
-                    cursor.close()
-                    conn.close()
-                except Exception:
-                    pass
+            if cursor:
+                cursor.close()
+            conn.close()
 
     @staticmethod
     def hapus_obat(obat_id):
-        """Menghapus record obat dari database berdasarkan ID."""
         conn = get_db_connection()
-        if not conn:
+
+        if conn is None:
             return False
+
+        cursor = None
 
         try:
             cursor = conn.cursor()
-            query = "DELETE FROM obat WHERE id = %s"
-            cursor.execute(query, (obat_id,))
+
+            cursor.execute(
+                "DELETE FROM obat WHERE id_obat = %s",
+                (obat_id,)
+            )
+
             conn.commit()
-            return True
-        except Exception as err:
-            if conn:
-                try:
-                    conn.rollback()
-                except Exception:
-                    pass
+            return cursor.rowcount > 0
+
+        except Exception as e:
+            print(f"Error menghapus obat: {e}")
+            conn.rollback()
             return False
+
         finally:
-            if conn:
-                try:
-                    cursor.close()
-                    conn.close()
-                except Exception:
-                    pass
+            if cursor:
+                cursor.close()
+            conn.close()
 
     @staticmethod
     def get_all_obat():
-        """Mengambil seluruh record data obat dari database."""
         conn = get_db_connection()
-        if not conn:
+
+        if conn is None:
             return []
+
+        cursor = None
 
         try:
             cursor = conn.cursor(dictionary=True)
-            query = "SELECT * FROM obat ORDER BY id DESC"
+
+            query = """
+                SELECT
+                    id_obat,
+                    id_obat AS id,
+                    nama_obat,
+                    jenis_obat,
+                    jenis_obat AS kategori,
+                    satuan,
+                    stok
+                FROM obat
+                ORDER BY id_obat DESC
+            """
+
             cursor.execute(query)
-            result = cursor.fetchall()
-            return result
-        except Exception as err:
+            return cursor.fetchall()
+
+        except Exception as e:
+            print(f"Error mengambil data obat: {e}")
             return []
+
         finally:
-            if conn:
-                try:
-                    cursor.close()
-                    conn.close()
-                except Exception:
-                    pass
+            if cursor:
+                cursor.close()
+            conn.close()
 
     @staticmethod
     def get_by_id(obat_id):
-        """Mengambil detail satu record obat berdasarkan ID."""
         conn = get_db_connection()
-        if not conn:
+
+        if conn is None:
             return None
+
+        cursor = None
 
         try:
             cursor = conn.cursor(dictionary=True)
-            query = "SELECT * FROM obat WHERE id = %s"
-            cursor.execute(query, (obat_id,))
-            result = cursor.fetchone()
-            return result
-        except Exception as err:
+
+            cursor.execute(
+                """
+                SELECT
+                    id_obat,
+                    id_obat AS id,
+                    nama_obat,
+                    jenis_obat,
+                    jenis_obat AS kategori,
+                    satuan,
+                    stok
+                FROM obat
+                WHERE id_obat = %s
+                """,
+                (obat_id,)
+            )
+
+            return cursor.fetchone()
+
+        except Exception as e:
+            print(f"Error mengambil detail obat: {e}")
             return None
+
         finally:
-            if conn:
-                try:
-                    cursor.close()
-                    conn.close()
-                except Exception:
-                    pass
+            if cursor:
+                cursor.close()
+            conn.close()
 
     @staticmethod
     def cari_obat(keyword):
-        """Mencari data obat berdasarkan nama atau kode obat."""
         conn = get_db_connection()
-        if not conn:
+
+        if conn is None:
             return []
+
+        cursor = None
 
         try:
             cursor = conn.cursor(dictionary=True)
-            query = "SELECT * FROM obat WHERE nama_obat LIKE %s OR kode_obat LIKE %s ORDER BY id DESC"
-            search_pattern = f"%{keyword}%"
-            cursor.execute(query, (search_pattern, search_pattern))
-            result = cursor.fetchall()
-            return result
-        except Exception as err:
-            return []
-        finally:
-            if conn:
-                try:
-                    cursor.close()
-                    conn.close()
-                except Exception:
-                    pass
 
-    # Aliases untuk kompatibilitas penamaan Bahasa Indonesia dan Inggris
+            pola = f"%{keyword}%"
+
+            cursor.execute(
+                """
+                SELECT
+                    id_obat,
+                    id_obat AS id,
+                    nama_obat,
+                    jenis_obat,
+                    jenis_obat AS kategori,
+                    satuan,
+                    stok
+                FROM obat
+                WHERE nama_obat LIKE %s
+                   OR jenis_obat LIKE %s
+                ORDER BY id_obat DESC
+                """,
+                (pola, pola)
+            )
+
+            return cursor.fetchall()
+
+        except Exception as e:
+            print(f"Error mencari obat: {e}")
+            return []
+
+        finally:
+            if cursor:
+                cursor.close()
+            conn.close()
+
+    # Alias kompatibilitas
     create = tambah_obat
     update = update_obat
     edit_obat = update_obat
