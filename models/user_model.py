@@ -36,3 +36,20 @@ class UserModel:
                 cursor.close()
 
             connection.close()
+    def get_all_users(self):
+        connection = Database.get_connection()
+        if connection is None:
+            return []
+        cursor = connection.cursor(dictionary=True)
+        try:
+            query = "SELECT * FROM users"
+            cursor.execute(query)
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error mengambil data user: {e}")
+            return []
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
