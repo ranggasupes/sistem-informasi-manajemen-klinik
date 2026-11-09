@@ -6,7 +6,7 @@ from models.kunjungan_model import KunjunganModel
 from models.rekam_medis_model import RekamMedisModel
 
 
-class PasienDashboardController:
+class PasienController:
 
     def __init__(self):
         self.pasien_model = PasienModel()

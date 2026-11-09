@@ -1,54 +1,92 @@
-from unittest.mock import patch, MagicMock
-from models.user_model import UserModel
+import hashlib
+from unittest.mock import MagicMock, patch
 
-@patch("models.user_model.Database.get_connection")
-def test_login_berhasil(mock_get_connection):
-    # 1. Mock koneksi dan kursor database
-    mock_conn = MagicMock()
-    mock_cursor = MagicMock()
-    mock_get_connection.return_value = mock_conn
-    mock_conn.cursor.return_value = mock_cursor
-    
-    # 2. Mock data user yang dikembalikan saat query pencarian username
-    mock_cursor.fetchone.return_value = {
+from controllers.auth_controller import AuthController
+
+
+def buat_hash(password):
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
+@patch("controllers.auth_controller.UserModel")
+def test_login_berhasil(mock_user):
+    user_model = mock_user.return_value
+    user_model.get_user_by_username.return_value = {
         "id_user": 1,
-        "username": "admin_klinik",
-        "password": "hashed_password123",
-        "role": "admin"
+        "username": "pasien01",
+        "password": buat_hash("password123"),
+        "role": "pasien"
     }
-    
-    # 3. Inisialisasi Model User
-    model = UserModel()
-    
-    # 4. Simulasi fungsi autentikasi / pengecekan login (sesuaikan nama method di user_model milikmu)
-    # Contoh: method mencari user berdasarkan username untuk divalidasi passwordnya
-    user = model.get_user_by_username("admin_klinik")
-    
-    # 5. Verifikasi hasil pengujian
-    assert user is not None
-    assert user["username"] == "admin_klinik"
-    assert user["role"] == "admin"
-    
-    # Memverifikasi apakah kursor database benar-benar mengeksekusi query
-    mock_cursor.execute.assert_called_once()
 
-@patch("models.user_model.Database.get_connection")
-def test_login_gagal_user_tidak_ditemukan(mock_get_connection):
-    # 1. Mock koneksi dan kursor database
-    mock_conn = MagicMock()
-    mock_cursor = MagicMock()
-    mock_get_connection.return_value = mock_conn
-    mock_conn.cursor.return_value = mock_cursor
-    
-    # 2. Mock nilai pengembalian None (artinya user tidak terdaftar di database)
-    mock_cursor.fetchone.return_value = None
-    
-    # 3. Inisialisasi Model User
-    model = UserModel()
-    
-    # 4. Simulasi pencarian username yang tidak ada
-    user = model.get_user_by_username("user_palsu")
-    
-    # 5. Verifikasi bahwa user bernilai None (gagal login)
-    assert user is None
-    mock_cursor.execute.assert_called_once()
+    controller = AuthController()
+    berhasil, hasil = controller.login("pasien01", "password123")
+
+    assert berhasil is True
+    assert hasil == {
+        "id_user": 1,
+        "username": "pasien01",
+        "role": "pasien"
+    }
+
+
+@patch("controllers.auth_controller.UserModel")
+def test_login_username_kosong(mock_user):
+    controller = AuthController()
+
+    berhasil, pesan = controller.login("", "password123")
+
+    assert berhasil is False
+    assert "harus diisi" in pesan.lower()
+    mock_user.return_value.get_user_by_username.assert_not_called()
+
+
+@patch("controllers.auth_controller.UserModel")
+def test_login_password_kosong(mock_user):
+    controller = AuthController()
+
+    berhasil, pesan = controller.login("pasien01", "")
+
+    assert berhasil is False
+    assert "harus diisi" in pesan.lower()
+    mock_user.return_value.get_user_by_username.assert_not_called()
+
+
+@patch("controllers.auth_controller.UserModel")
+def test_login_username_tidak_ditemukan(mock_user):
+    user_model = mock_user.return_value
+    user_model.get_user_by_username.return_value = None
+
+    controller = AuthController()
+    berhasil, pesan = controller.login("tidak_ada", "password123")
+
+    assert berhasil is False
+    assert "username tidak ditemukan" in pesan.lower()
+
+
+@patch("controllers.auth_controller.UserModel")
+def test_login_password_salah(mock_user):
+    user_model = mock_user.return_value
+    user_model.get_user_by_username.return_value = {
+        "id_user": 1,
+        "username": "pasien01",
+        "password": buat_hash("password_benar"),
+        "role": "pasien"
+    }
+
+    controller = AuthController()
+    berhasil, pesan = controller.login("pasien01", "password_salah")
+
+    assert berhasil is False
+    assert "password" in pesan.lower()
+
+
+@patch("controllers.auth_controller.UserModel")
+def test_login_database_bermasalah(mock_user):
+    user_model = mock_user.return_value
+    user_model.get_user_by_username.return_value = None
+
+    controller = AuthController()
+    berhasil, pesan = controller.login("pasien01", "password123")
+
+    assert berhasil is False
+    assert "database bermasalah" in pesan.lower()

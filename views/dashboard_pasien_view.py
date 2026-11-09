@@ -2,7 +2,7 @@
 import customtkinter as ctk
 from tkinter import ttk, messagebox
 
-from controllers.pasien_dashboard_controller import PasienDashboardController
+from controllers.pasien_controller import PasienController
 
 from views.dashboard_components import (
     WARNA_BG,
@@ -28,7 +28,7 @@ class DashboardPasienFrame(ctk.CTkFrame):
         self.username = username
         self.id_user = id_user
         self.on_logout = on_logout
-        self.controller = PasienDashboardController()
+        self.controller = PasienController()
 
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)

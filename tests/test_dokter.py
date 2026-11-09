@@ -1,5 +1,6 @@
 from unittest.mock import patch, MagicMock
 from models.dokter_model import DokterModel
+from controllers.dokter_controller import DokterController
 
 @patch("models.dokter_model.Database.get_connection")
 def test_get_all_dokter(mock_get_connection):
@@ -58,3 +59,39 @@ def test_get_by_user_id(mock_get_connection):
     assert dokter["id_user"] == 141
     assert dokter["nama_dokter"] == "Dr. Andi Pratama"
     mock_cursor.execute.assert_called_once()
+
+
+@patch("controllers.dokter_controller.DokterModel")
+def test_dokter_controller_daftar_dokter(mock_model):
+    # Setup data dokter
+    data_dokter = [
+        {
+            "id_dokter": 1,
+            "id_user": 141,
+            "id_poli": 1,
+            "nama_dokter": "Dr. Andi Pratama",
+            "spesialisasi": "Dokter Spesialis Anak",
+            "no_telepon": "081234567801"
+        }
+    ]
+
+    mock_model.return_value.get_all_dokter.return_value = data_dokter
+
+    # Eksekusi controller
+    controller = DokterController()
+    result = controller.daftar_dokter()
+
+    # Verifikasi
+    assert result == data_dokter
+    mock_model.return_value.get_all_dokter.assert_called_once()
+
+
+@patch("controllers.dokter_controller.DokterModel")
+def test_dokter_controller_daftar_dokter_kosong(mock_model):
+    mock_model.return_value.get_all_dokter.return_value = []
+
+    controller = DokterController()
+    result = controller.daftar_dokter()
+
+    assert result == []
+    mock_model.return_value.get_all_dokter.assert_called_once()

@@ -1,20 +1,103 @@
 import customtkinter as ctk
 from tkinter import ttk, messagebox
 
+from models.dokter_model import DokterModel
+from models.kunjungan_model import KunjunganModel
+from controllers.pasien_dashboard_controller import PasienDashboardController
+from models.rekam_medis_model import RekamMedisModel
 from controllers.obat_controller import ObatController
 from models.resep_model import ResepModel
+from views.dashboard_pasien_view import DashboardPasienFrame
 
 from views.dashboard_components import (
     WARNA_BG,
     WARNA_PUTIH,
     WARNA_BIRU,
     WARNA_BIRU_TUA,
+    WARNA_TEKS,
     WARNA_ABU,
+    WARNA_GARIS,
     WARNA_HIJAU,
     WARNA_MERAH,
     buat_tombol,
-    buat_judul
+    buat_judul,
+    buat_kartu,
+    tampilkan_modul_belum_terhubung
 )
+
+
+# =====================================================
+# PENGATURAN TAMPILAN
+# =====================================================
+
+ctk.set_appearance_mode("Light")
+ctk.set_default_color_theme("blue")
+
+WARNA_BG = "#F2F5F8"
+WARNA_PUTIH = "#FFFFFF"
+WARNA_BIRU = "#367FB5"
+WARNA_BIRU_TUA = "#24527A"
+WARNA_TEKS = "#333333"
+WARNA_ABU = "#777777"
+WARNA_GARIS = "#DCE3E9"
+WARNA_HIJAU = "#39865B"
+WARNA_MERAH = "#C94C4C"
+
+
+def buat_tombol(parent, teks, command, warna=WARNA_BIRU,
+                hover="#286A9D", lebar=150):
+    return ctk.CTkButton(
+        parent,
+        text=teks,
+        command=command,
+        width=lebar,
+        height=38,
+        corner_radius=7,
+        fg_color=warna,
+        hover_color=hover,
+        font=("Arial", 12)
+    )
+
+
+def buat_judul(parent, teks, ukuran=20):
+    return ctk.CTkLabel(
+        parent,
+        text=teks,
+        font=("Arial", ukuran, "bold"),
+        text_color=WARNA_TEKS
+    )
+
+
+def buat_kartu(parent, judul):
+    frame = ctk.CTkFrame(
+        parent,
+        fg_color=WARNA_PUTIH,
+        corner_radius=8,
+        border_width=1,
+        border_color=WARNA_GARIS
+    )
+
+    ctk.CTkLabel(
+        frame,
+        text=judul,
+        font=("Arial", 14, "bold"),
+        text_color=WARNA_BIRU_TUA
+    ).pack(anchor="w", padx=18, pady=(16, 10))
+
+    return frame
+
+
+def tampilkan_modul_belum_terhubung(nama_modul):
+    messagebox.showinfo(
+        "Informasi Modul",
+        f"Menu {nama_modul} belum dihubungkan dengan controller."
+    )
+
+
+# =====================================================
+# DASHBOARD ADMIN / APOTEKER
+# =====================================================
+
 
 
 class DashboardAdminFrame(ctk.CTkFrame):
@@ -337,3 +420,10 @@ class DashboardAdminFrame(ctk.CTkFrame):
     def logout(self):
         if self.on_logout:
             self.on_logout()
+
+# =====================================================
+# DASHBOARD DOKTER
+# =====================================================
+
+
+from views.dashboard_dokter_view import DashboardDokterFrame

@@ -1,3 +1,3 @@
 from views.dashboard_pasien_view import DashboardPasienFrame
 from views.dashboard_dokter_view import DashboardDokterFrame
-from views.dashboard_apoteker_view import DashboardAdminFrame
+from views.dashboard_admin_view import DashboardAdminFrame
