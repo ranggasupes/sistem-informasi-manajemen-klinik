@@ -1,286 +1,216 @@
+
 from unittest.mock import MagicMock, patch
 
 from models.resep_model import ResepModel
 
 
-@patch("models.resep_model.Database.get_connection")
-def test_get_antrean_resep_berhasil(mock_connection):
-    connection = MagicMock()
-    cursor = MagicMock()
+DB = "models.resep_model.Database.get_connection"
 
-    mock_connection.return_value = connection
-    connection.cursor.return_value = cursor
 
+def _db(mock_db, fetchone="default", fetchall=None, error=None):
+    conn, cursor = MagicMock(), MagicMock()
+    mock_db.return_value = conn
+    conn.cursor.return_value = cursor
+
+    if fetchone != "default":
+        cursor.fetchone.return_value = fetchone
+    if fetchall is not None:
+        cursor.fetchall.return_value = fetchall
+    if error:
+        cursor.execute.side_effect = error
+
+    return conn, cursor
+
+
+def _resep():
+    return ResepModel()
+
+
+def _data_resep(status="Menunggu"):
+    return [{
+        "id_resep": 1,
+        "id_obat": 5,
+        "jumlah": 3,
+        "status_penyerahan": status
+    }]
+
+
+# GET ANTREAN RESEP
+
+@patch(DB)
+def test_get_antrean_resep_berhasil(mock_db):
     data = [{"id_resep": 1, "nama_pasien": "Pasien Uji"}]
-    cursor.fetchall.return_value = data
+    conn, cursor = _db(mock_db, fetchall=data)
 
-    hasil = ResepModel().get_antrean_resep()
-
-    assert hasil == data
+    assert _resep().get_antrean_resep() == data
     cursor.execute.assert_called_once()
     cursor.close.assert_called_once()
-    connection.close.assert_called_once()
+    conn.close.assert_called_once()
 
 
-@patch("models.resep_model.Database.get_connection")
-def test_get_antrean_resep_koneksi_gagal(mock_connection):
-    mock_connection.return_value = None
-
-    hasil = ResepModel().get_antrean_resep()
-
-    assert hasil == []
+@patch(DB)
+def test_get_antrean_resep_koneksi_gagal(mock_db):
+    mock_db.return_value = None
+    assert _resep().get_antrean_resep() == []
 
 
-@patch("models.resep_model.Database.get_connection")
-def test_get_antrean_resep_error_database(mock_connection):
-    connection = MagicMock()
-    cursor = MagicMock()
+@patch(DB)
+def test_get_antrean_resep_error_database(mock_db):
+    conn, _ = _db(mock_db, error=Exception("Database error"))
 
-    mock_connection.return_value = connection
-    connection.cursor.return_value = cursor
-    cursor.execute.side_effect = Exception("Database error")
-
-    hasil = ResepModel().get_antrean_resep()
-
-    assert hasil == []
-    connection.close.assert_called_once()
+    assert _resep().get_antrean_resep() == []
+    conn.close.assert_called_once()
 
 
-@patch("models.resep_model.Database.get_connection")
-def test_get_riwayat_penyerahan_berhasil(mock_connection):
-    connection = MagicMock()
-    cursor = MagicMock()
+# GET RIWAYAT PENYERAHAN
 
-    mock_connection.return_value = connection
-    connection.cursor.return_value = cursor
-
+@patch(DB)
+def test_get_riwayat_penyerahan_berhasil(mock_db):
     data = [{"id_resep": 1, "nama_petugas": "admin"}]
-    cursor.fetchall.return_value = data
+    conn, cursor = _db(mock_db, fetchall=data)
 
-    hasil = ResepModel().get_riwayat_penyerahan()
-
-    assert hasil == data
+    assert _resep().get_riwayat_penyerahan() == data
     cursor.execute.assert_called_once()
     cursor.close.assert_called_once()
-    connection.close.assert_called_once()
+    conn.close.assert_called_once()
 
 
-@patch("models.resep_model.Database.get_connection")
-def test_get_riwayat_penyerahan_koneksi_gagal(mock_connection):
-    mock_connection.return_value = None
-
-    hasil = ResepModel().get_riwayat_penyerahan()
-
-    assert hasil == []
+@patch(DB)
+def test_get_riwayat_penyerahan_koneksi_gagal(mock_db):
+    mock_db.return_value = None
+    assert _resep().get_riwayat_penyerahan() == []
 
 
-@patch("models.resep_model.Database.get_connection")
-def test_get_riwayat_penyerahan_error_database(mock_connection):
-    connection = MagicMock()
-    cursor = MagicMock()
+@patch(DB)
+def test_get_riwayat_penyerahan_error_database(mock_db):
+    conn, _ = _db(mock_db, error=Exception("Database error"))
 
-    mock_connection.return_value = connection
-    connection.cursor.return_value = cursor
-    cursor.execute.side_effect = Exception("Database error")
-
-    hasil = ResepModel().get_riwayat_penyerahan()
-
-    assert hasil == []
-    connection.close.assert_called_once()
+    assert _resep().get_riwayat_penyerahan() == []
+    conn.close.assert_called_once()
 
 
-@patch("models.resep_model.Database.get_connection")
-def test_serahkan_obat_berhasil(mock_connection):
-    connection = MagicMock()
-    cursor = MagicMock()
+# SERAHKAN OBAT
 
-    mock_connection.return_value = connection
-    connection.cursor.return_value = cursor
-
+@patch(DB)
+def test_serahkan_obat_berhasil(mock_db):
+    conn, cursor = _db(mock_db)
     cursor.fetchone.side_effect = [
         {"id_kunjungan": 10},
         {"nama_obat": "Paracetamol", "stok": 20}
     ]
-
-    cursor.fetchall.return_value = [
-        {
-            "id_resep": 1,
-            "id_obat": 5,
-            "jumlah": 3,
-            "status_penyerahan": "Menunggu"
-        }
-    ]
-
+    cursor.fetchall.return_value = _data_resep()
     cursor.rowcount = 1
 
-    hasil = ResepModel().serahkan_obat(10, 2)
+    hasil = _resep().serahkan_obat(10, 2)
 
     assert hasil[0] is True
     assert "berhasil diserahkan" in hasil[1].lower()
+    conn.start_transaction.assert_called_once()
+    conn.commit.assert_called_once()
+    conn.rollback.assert_not_called()
+    conn.close.assert_called_once()
 
-    connection.start_transaction.assert_called_once()
-    connection.commit.assert_called_once()
-    connection.rollback.assert_not_called()
-    connection.close.assert_called_once()
 
+@patch(DB)
+def test_serahkan_obat_koneksi_gagal(mock_db):
+    mock_db.return_value = None
 
-@patch("models.resep_model.Database.get_connection")
-def test_serahkan_obat_koneksi_gagal(mock_connection):
-    mock_connection.return_value = None
-
-    hasil = ResepModel().serahkan_obat(10, 2)
+    hasil = _resep().serahkan_obat(10, 2)
 
     assert hasil[0] is False
     assert "koneksi database gagal" in hasil[1].lower()
 
 
-@patch("models.resep_model.Database.get_connection")
-def test_serahkan_obat_ditolak_jika_kunjungan_tidak_ditemukan(
-    mock_connection
-):
-    connection = MagicMock()
-    cursor = MagicMock()
+@patch(DB)
+def test_serahkan_obat_ditolak_jika_kunjungan_tidak_ditemukan(mock_db):
+    conn, _ = _db(mock_db, fetchone=None)
 
-    mock_connection.return_value = connection
-    connection.cursor.return_value = cursor
-    cursor.fetchone.return_value = None
-
-    hasil = ResepModel().serahkan_obat(10, 2)
+    hasil = _resep().serahkan_obat(10, 2)
 
     assert hasil[0] is False
     assert "tidak menunggu obat" in hasil[1].lower()
+    conn.rollback.assert_called_once()
+    conn.commit.assert_not_called()
 
-    connection.rollback.assert_called_once()
-    connection.commit.assert_not_called()
 
+@patch(DB)
+def test_serahkan_obat_ditolak_jika_resep_kosong(mock_db):
+    conn, _ = _db(
+        mock_db,
+        fetchone={"id_kunjungan": 10},
+        fetchall=[]
+    )
 
-@patch("models.resep_model.Database.get_connection")
-def test_serahkan_obat_ditolak_jika_resep_kosong(mock_connection):
-    connection = MagicMock()
-    cursor = MagicMock()
-
-    mock_connection.return_value = connection
-    connection.cursor.return_value = cursor
-
-    cursor.fetchone.return_value = {"id_kunjungan": 10}
-    cursor.fetchall.return_value = []
-
-    hasil = ResepModel().serahkan_obat(10, 2)
+    hasil = _resep().serahkan_obat(10, 2)
 
     assert hasil[0] is False
     assert "resep tidak ditemukan" in hasil[1].lower()
+    conn.rollback.assert_called_once()
+    conn.commit.assert_not_called()
 
-    connection.rollback.assert_called_once()
-    connection.commit.assert_not_called()
 
+@patch(DB)
+def test_serahkan_obat_ditolak_jika_status_resep_berubah(mock_db):
+    conn, _ = _db(
+        mock_db,
+        fetchone={"id_kunjungan": 10},
+        fetchall=_data_resep("Diserahkan")
+    )
 
-@patch("models.resep_model.Database.get_connection")
-def test_serahkan_obat_ditolak_jika_status_resep_berubah(
-    mock_connection
-):
-    connection = MagicMock()
-    cursor = MagicMock()
-
-    mock_connection.return_value = connection
-    connection.cursor.return_value = cursor
-
-    cursor.fetchone.return_value = {"id_kunjungan": 10}
-    cursor.fetchall.return_value = [
-        {
-            "id_resep": 1,
-            "id_obat": 5,
-            "jumlah": 3,
-            "status_penyerahan": "Diserahkan"
-        }
-    ]
-
-    hasil = ResepModel().serahkan_obat(10, 2)
+    hasil = _resep().serahkan_obat(10, 2)
 
     assert hasil[0] is False
     assert "status resep sudah berubah" in hasil[1].lower()
+    conn.rollback.assert_called_once()
 
-    connection.rollback.assert_called_once()
 
-
-@patch("models.resep_model.Database.get_connection")
-def test_serahkan_obat_ditolak_jika_obat_tidak_ditemukan(
-    mock_connection
-):
-    connection = MagicMock()
-    cursor = MagicMock()
-
-    mock_connection.return_value = connection
-    connection.cursor.return_value = cursor
-
+@patch(DB)
+def test_serahkan_obat_ditolak_jika_obat_tidak_ditemukan(mock_db):
+    conn, cursor = _db(
+        mock_db,
+        fetchone={"id_kunjungan": 10},
+        fetchall=_data_resep()
+    )
     cursor.fetchone.side_effect = [
         {"id_kunjungan": 10},
         None
     ]
 
-    cursor.fetchall.return_value = [
-        {
-            "id_resep": 1,
-            "id_obat": 5,
-            "jumlah": 3,
-            "status_penyerahan": "Menunggu"
-        }
-    ]
-
-    hasil = ResepModel().serahkan_obat(10, 2)
+    hasil = _resep().serahkan_obat(10, 2)
 
     assert hasil[0] is False
     assert "data obat tidak ditemukan" in hasil[1].lower()
+    conn.rollback.assert_called_once()
+    conn.commit.assert_not_called()
 
-    connection.rollback.assert_called_once()
-    connection.commit.assert_not_called()
 
-
-@patch("models.resep_model.Database.get_connection")
-def test_serahkan_obat_ditolak_jika_stok_tidak_cukup(
-    mock_connection
-):
-    connection = MagicMock()
-    cursor = MagicMock()
-
-    mock_connection.return_value = connection
-    connection.cursor.return_value = cursor
-
+@patch(DB)
+def test_serahkan_obat_ditolak_jika_stok_tidak_cukup(mock_db):
+    conn, cursor = _db(
+        mock_db,
+        fetchone={"id_kunjungan": 10},
+        fetchall=_data_resep()
+    )
     cursor.fetchone.side_effect = [
         {"id_kunjungan": 10},
         {"nama_obat": "Paracetamol", "stok": 2}
     ]
 
-    cursor.fetchall.return_value = [
-        {
-            "id_resep": 1,
-            "id_obat": 5,
-            "jumlah": 5,
-            "status_penyerahan": "Menunggu"
-        }
-    ]
-
-    hasil = ResepModel().serahkan_obat(10, 2)
+    hasil = _resep().serahkan_obat(10, 2)
 
     assert hasil[0] is False
     assert "tidak mencukupi" in hasil[1].lower()
+    conn.rollback.assert_called_once()
+    conn.commit.assert_not_called()
 
-    connection.rollback.assert_called_once()
-    connection.commit.assert_not_called()
 
+@patch(DB)
+def test_serahkan_obat_error_database(mock_db):
+    conn, _ = _db(mock_db, error=Exception("Database error"))
 
-@patch("models.resep_model.Database.get_connection")
-def test_serahkan_obat_error_database(mock_connection):
-    connection = MagicMock()
-    cursor = MagicMock()
-
-    mock_connection.return_value = connection
-    connection.cursor.return_value = cursor
-    cursor.execute.side_effect = Exception("Database error")
-
-    hasil = ResepModel().serahkan_obat(10, 2)
+    hasil = _resep().serahkan_obat(10, 2)
 
     assert hasil[0] is False
     assert "penyerahan obat gagal" in hasil[1].lower()
-
-    connection.rollback.assert_called_once()
-    connection.close.assert_called_once()
+    conn.rollback.assert_called_once()
+    conn.close.assert_called_once()

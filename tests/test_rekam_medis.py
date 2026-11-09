@@ -4,77 +4,82 @@ from unittest.mock import MagicMock, patch
 from models.rekam_medis_model import RekamMedisModel
 
 
-# =========================================================
-# GET ALL REKAM MEDIS
-# =========================================================
-
-@patch("models.rekam_medis_model.Database.get_connection")
-def test_get_all_rekam_medis_berhasil(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
-
+# HELPER
+def _db(mock_db, fetchone="default", fetchall=None,
+        error=None, rowcount=1):
+    conn, cursor = MagicMock(), MagicMock()
     mock_db.return_value = conn
     conn.cursor.return_value = cursor
+    cursor.rowcount = rowcount
 
-    data = [
-        {
-            "id_rekam_medis": 1,
-            "id_kunjungan": 10,
-            "nama_pasien": "Pasien Uji",
-            "diagnosis": "Demam"
-        }
-    ]
-    cursor.fetchall.return_value = data
+    if fetchone != "default":
+        cursor.fetchone.return_value = fetchone
 
-    model = RekamMedisModel()
-    hasil = model.get_all_rekam_medis()
+    if fetchall is not None:
+        cursor.fetchall.return_value = fetchall
 
-    assert hasil == data
+    if error:
+        cursor.execute.side_effect = error
+
+    return conn, cursor
+
+
+def _resep(jumlah=5, dosis="2 kali sehari",
+           aturan="Sesudah makan", id_obat=1):
+    return {
+        "id_obat": id_obat,
+        "jumlah": jumlah,
+        "dosis": dosis,
+        "aturan_pakai": aturan
+    }
+
+
+def _rekam_medis():
+    return {"id_kunjungan": 10}
+
+
+def _obat(stok=100):
+    return {"id_obat": 1, "stok": stok}
+
+
+def _model():
+    return RekamMedisModel()
+
+
+DB = "models.rekam_medis_model.Database.get_connection"
+
+
+# GET ALL REKAM MEDIS
+@patch(DB)
+def test_get_all_rekam_medis_berhasil(mock_db):
+    conn, cursor = _db(mock_db, fetchall=[{"id_rekam_medis": 1}])
+    hasil = _model().get_all_rekam_medis()
+
+    assert hasil == [{"id_rekam_medis": 1}]
     cursor.execute.assert_called_once()
     conn.close.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_get_all_rekam_medis_koneksi_gagal(mock_db):
     mock_db.return_value = None
-
-    model = RekamMedisModel()
-
-    assert model.get_all_rekam_medis() == []
+    assert _model().get_all_rekam_medis() == []
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_get_all_rekam_medis_error_database(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, cursor = _db(mock_db, error=Exception("Database error"))
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.execute.side_effect = Exception("Database error")
-
-    model = RekamMedisModel()
-    hasil = model.get_all_rekam_medis()
-
-    assert hasil == []
+    assert _model().get_all_rekam_medis() == []
     cursor.close.assert_called_once()
     conn.close.assert_called_once()
 
 
-# =========================================================
 # CREATE REKAM MEDIS
-# =========================================================
-
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_rekam_medis_berhasil(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
-
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-
-    model = RekamMedisModel()
-
-    hasil = model.create_rekam_medis(
+    conn, cursor = _db(mock_db)
+    hasil = _model().create_rekam_medis(
         10, "120/80", 36.5, 55, "Demam", "Istirahat cukup"
     )
 
@@ -84,61 +89,32 @@ def test_create_rekam_medis_berhasil(mock_db):
     conn.close.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_rekam_medis_data_opsional_kosong(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
-
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-
-    model = RekamMedisModel()
-
-    hasil = model.create_rekam_medis(
+    conn, cursor = _db(mock_db)
+    hasil = _model().create_rekam_medis(
         10, "", None, 0, "Demam", ""
     )
 
     assert hasil is True
-
-    values = cursor.execute.call_args[0][1]
-
-    assert values == (
-        10,
-        None,
-        None,
-        None,
-        "Demam",
-        None
+    assert cursor.execute.call_args[0][1] == (
+        10, None, None, None, "Demam", None
     )
-
     conn.commit.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_rekam_medis_koneksi_gagal(mock_db):
     mock_db.return_value = None
-
-    model = RekamMedisModel()
-
-    hasil = model.create_rekam_medis(
+    assert _model().create_rekam_medis(
         10, "120/80", 36.5, 55, "Demam", "Catatan"
-    )
-
-    assert hasil is False
+    ) is False
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_rekam_medis_error_database(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
-
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.execute.side_effect = Exception("Database error")
-
-    model = RekamMedisModel()
-
-    hasil = model.create_rekam_medis(
+    conn, cursor = _db(mock_db, error=Exception("Database error"))
+    hasil = _model().create_rekam_medis(
         10, "120/80", 36.5, 55, "Demam", "Catatan"
     )
 
@@ -148,105 +124,47 @@ def test_create_rekam_medis_error_database(mock_db):
     conn.close.assert_called_once()
 
 
-# =========================================================
-# GET HISTORY BY USER ID
-# =========================================================
-
-@patch("models.rekam_medis_model.Database.get_connection")
+# RIWAYAT REKAM MEDIS
+@patch(DB)
 def test_get_history_by_user_id_berhasil(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    data = [{"id_rekam_medis": 25, "diagnosis": "Demam"}]
+    conn, cursor = _db(mock_db, fetchall=data)
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-
-    data = [
-        {
-            "id_rekam_medis": 25,
-            "id_kunjungan": 10,
-            "nomor_antrian": 3,
-            "nama_poli": "Poli Umum",
-            "nama_dokter": "Dokter Uji",
-            "diagnosis": "Demam"
-        }
-    ]
-    cursor.fetchall.return_value = data
-
-    model = RekamMedisModel()
-    hasil = model.get_history_by_user_id(21)
-
-    assert hasil == data
-    cursor.execute.assert_called_once()
-
-    values = cursor.execute.call_args[0][1]
-    assert values == (21,)
-
+    assert _model().get_history_by_user_id(21) == data
+    assert cursor.execute.call_args[0][1] == (21,)
     cursor.close.assert_called_once()
     conn.close.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_get_history_by_user_id_data_kosong(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
-
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.fetchall.return_value = []
-
-    model = RekamMedisModel()
-    hasil = model.get_history_by_user_id(21)
-
-    assert hasil == []
+    conn, _ = _db(mock_db, fetchall=[])
+    assert _model().get_history_by_user_id(21) == []
     conn.close.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_get_history_by_user_id_koneksi_gagal(mock_db):
     mock_db.return_value = None
-
-    model = RekamMedisModel()
-
-    assert model.get_history_by_user_id(21) == []
+    assert _model().get_history_by_user_id(21) == []
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_get_history_by_user_id_error_database(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, cursor = _db(mock_db, error=Exception("Database error"))
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.execute.side_effect = Exception("Database error")
-
-    model = RekamMedisModel()
-    hasil = model.get_history_by_user_id(21)
-
-    assert hasil == []
+    assert _model().get_history_by_user_id(21) == []
     cursor.close.assert_called_once()
     conn.close.assert_called_once()
 
 
-# =========================================================
 # CREATE REKAM MEDIS DOKTER
-# =========================================================
-
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_rekam_medis_dokter_berhasil(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
-
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-
-    cursor.fetchone.return_value = {
-        "id_kunjungan": 10
-    }
+    conn, cursor = _db(mock_db, fetchone=_rekam_medis())
     cursor.lastrowid = 25
 
-    model = RekamMedisModel()
-
-    hasil = model.create_rekam_medis_dokter(
+    hasil = _model().create_rekam_medis_dokter(
         10, 21, "120/80", 36.5, 55, "Demam", "Istirahat"
     )
 
@@ -256,130 +174,61 @@ def test_create_rekam_medis_dokter_berhasil(mock_db):
     conn.close.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_rekam_medis_dokter_data_opsional_kosong(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
-
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-
-    cursor.fetchone.return_value = {
-        "id_kunjungan": 10
-    }
+    _, cursor = _db(mock_db, fetchone=_rekam_medis())
     cursor.lastrowid = 26
 
-    model = RekamMedisModel()
-
-    hasil = model.create_rekam_medis_dokter(
+    hasil = _model().create_rekam_medis_dokter(
         10, 21, "", None, 0, "Demam", ""
     )
 
     assert hasil == 26
-
-    values = cursor.execute.call_args[0][1]
-
-    assert values == (
-        10,
-        None,
-        None,
-        None,
-        "Demam",
-        None
+    assert cursor.execute.call_args[0][1] == (
+        10, None, None, None, "Demam", None
     )
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_rekam_medis_dokter_ditolak(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
-
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.fetchone.return_value = None
-
-    model = RekamMedisModel()
-
-    hasil = model.create_rekam_medis_dokter(
+    conn, _ = _db(mock_db, fetchone=None)
+    assert _model().create_rekam_medis_dokter(
         10, 99, "120/80", 36.5, 55, "Demam", "Catatan"
-    )
+    ) is None
 
-    assert hasil is None
     conn.rollback.assert_called_once()
     conn.commit.assert_not_called()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_rekam_medis_dokter_koneksi_gagal(mock_db):
     mock_db.return_value = None
-
-    model = RekamMedisModel()
-
-    hasil = model.create_rekam_medis_dokter(
+    assert _model().create_rekam_medis_dokter(
         10, 21, "120/80", 36.5, 55, "Demam", "Catatan"
-    )
-
-    assert hasil is None
+    ) is None
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_rekam_medis_dokter_error_database(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, cursor = _db(mock_db, error=Exception("Database error"))
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.execute.side_effect = Exception("Database error")
-
-    model = RekamMedisModel()
-
-    hasil = model.create_rekam_medis_dokter(
+    assert _model().create_rekam_medis_dokter(
         10, 21, "120/80", 36.5, 55, "Demam", "Catatan"
-    )
+    ) is None
 
-    assert hasil is None
     conn.rollback.assert_called_once()
     cursor.close.assert_called_once()
     conn.close.assert_called_once()
 
 
-# =========================================================
 # CREATE RESEP DOKTER
-# =========================================================
-
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_resep_dokter_berhasil(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, cursor = _db(mock_db)
+    cursor.fetchone.side_effect = [_rekam_medis(), _obat()]
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-
-    cursor.fetchone.side_effect = [
-        {
-            "id_rekam_medis": 25,
-            "id_kunjungan": 10
-        },
-        {
-            "id_obat": 1,
-            "stok": 100
-        }
-    ]
-    cursor.rowcount = 1
-
-    daftar_resep = [
-        {
-            "id_obat": 1,
-            "jumlah": 10,
-            "dosis": "3 kali sehari",
-            "aturan_pakai": "Sesudah makan"
-        }
-    ]
-
-    model = RekamMedisModel()
-
-    hasil = model.create_resep_dokter(
-        25, 21, daftar_resep
+    hasil = _model().create_resep_dokter(
+        25, 21, [_resep(jumlah=10)]
     )
 
     assert hasil is True
@@ -387,401 +236,158 @@ def test_create_resep_dokter_berhasil(mock_db):
     conn.commit.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_resep_dokter_daftar_kosong(mock_db):
-    conn = MagicMock()
-    mock_db.return_value = conn
+    conn, _ = _db(mock_db)
 
-    model = RekamMedisModel()
-
-    hasil = model.create_resep_dokter(25, 21, [])
-
-    assert hasil is False
+    assert _model().create_resep_dokter(25, 21, []) is False
     conn.commit.assert_not_called()
     conn.close.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_resep_dokter_koneksi_gagal(mock_db):
     mock_db.return_value = None
-
-    model = RekamMedisModel()
-
-    assert model.create_resep_dokter(25, 21, []) is False
+    assert _model().create_resep_dokter(25, 21, []) is False
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_resep_dokter_ditolak_jika_dokter_tidak_sesuai(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, _ = _db(mock_db, fetchone=None)
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.fetchone.return_value = None
+    assert _model().create_resep_dokter(
+        25, 99, [_resep()]
+    ) is False
 
-    model = RekamMedisModel()
-
-    hasil = model.create_resep_dokter(
-        25,
-        99,
-        [
-            {
-                "id_obat": 1,
-                "jumlah": 5,
-                "dosis": "2 kali sehari",
-                "aturan_pakai": "Sesudah makan"
-            }
-        ]
-    )
-
-    assert hasil is False
     conn.rollback.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_resep_dokter_ditolak_jika_stok_tidak_cukup(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, cursor = _db(mock_db)
+    cursor.fetchone.side_effect = [_rekam_medis(), _obat(stok=5)]
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
+    assert _model().create_resep_dokter(
+        25, 21, [_resep(jumlah=10)]
+    ) is False
 
-    cursor.fetchone.side_effect = [
-        {
-            "id_rekam_medis": 25,
-            "id_kunjungan": 10
-        },
-        {
-            "id_obat": 1,
-            "stok": 5
-        }
-    ]
-
-    daftar_resep = [
-        {
-            "id_obat": 1,
-            "jumlah": 10,
-            "dosis": "3 kali sehari",
-            "aturan_pakai": "Sesudah makan"
-        }
-    ]
-
-    model = RekamMedisModel()
-
-    hasil = model.create_resep_dokter(
-        25, 21, daftar_resep
-    )
-
-    assert hasil is False
     conn.rollback.assert_called_once()
     conn.commit.assert_not_called()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_resep_dokter_obat_tidak_ditemukan(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, cursor = _db(mock_db)
+    cursor.fetchone.side_effect = [_rekam_medis(), None]
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
+    assert _model().create_resep_dokter(
+        25, 21, [_resep()]
+    ) is False
 
-    cursor.fetchone.side_effect = [
-        {
-            "id_rekam_medis": 25,
-            "id_kunjungan": 10
-        },
-        None
-    ]
-
-    daftar_resep = [
-        {
-            "id_obat": 99,
-            "jumlah": 5,
-            "dosis": "2 kali sehari",
-            "aturan_pakai": "Sesudah makan"
-        }
-    ]
-
-    model = RekamMedisModel()
-
-    hasil = model.create_resep_dokter(
-        25, 21, daftar_resep
-    )
-
-    assert hasil is False
     conn.rollback.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_resep_dokter_jumlah_tidak_valid(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, cursor = _db(mock_db, fetchone=_rekam_medis())
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.fetchone.return_value = {
-        "id_rekam_medis": 25,
-        "id_kunjungan": 10
-    }
+    assert _model().create_resep_dokter(
+        25, 21, [_resep(jumlah=0)]
+    ) is False
 
-    daftar_resep = [
-        {
-            "id_obat": 1,
-            "jumlah": 0,
-            "dosis": "2 kali sehari",
-            "aturan_pakai": "Sesudah makan"
-        }
-    ]
-
-    model = RekamMedisModel()
-
-    hasil = model.create_resep_dokter(
-        25, 21, daftar_resep
-    )
-
-    assert hasil is False
     conn.rollback.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_resep_dokter_dosis_kosong(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, _ = _db(mock_db, fetchone=_rekam_medis())
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.fetchone.return_value = {
-        "id_rekam_medis": 25,
-        "id_kunjungan": 10
-    }
+    assert _model().create_resep_dokter(
+        25, 21, [_resep(dosis="   ")]
+    ) is False
 
-    daftar_resep = [
-        {
-            "id_obat": 1,
-            "jumlah": 5,
-            "dosis": "   ",
-            "aturan_pakai": "Sesudah makan"
-        }
-    ]
-
-    model = RekamMedisModel()
-
-    hasil = model.create_resep_dokter(
-        25, 21, daftar_resep
-    )
-
-    assert hasil is False
     conn.rollback.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_resep_dokter_aturan_pakai_kosong(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, _ = _db(mock_db, fetchone=_rekam_medis())
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.fetchone.return_value = {
-        "id_rekam_medis": 25,
-        "id_kunjungan": 10
-    }
+    assert _model().create_resep_dokter(
+        25, 21, [_resep(aturan="   ")]
+    ) is False
 
-    daftar_resep = [
-        {
-            "id_obat": 1,
-            "jumlah": 5,
-            "dosis": "2 kali sehari",
-            "aturan_pakai": "   "
-        }
-    ]
-
-    model = RekamMedisModel()
-
-    hasil = model.create_resep_dokter(
-        25, 21, daftar_resep
-    )
-
-    assert hasil is False
     conn.rollback.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_resep_dokter_obat_duplikat(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, cursor = _db(mock_db)
+    cursor.fetchone.side_effect = [_rekam_medis(), _obat()]
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-
-    cursor.fetchone.side_effect = [
-        {
-            "id_rekam_medis": 25,
-            "id_kunjungan": 10
-        },
-        {
-            "id_obat": 1,
-            "stok": 100
-        }
+    daftar = [
+        _resep(jumlah=5),
+        _resep(jumlah=3, dosis="1 kali sehari", aturan="Sebelum tidur")
     ]
 
-    daftar_resep = [
-        {
-            "id_obat": 1,
-            "jumlah": 5,
-            "dosis": "2 kali sehari",
-            "aturan_pakai": "Sesudah makan"
-        },
-        {
-            "id_obat": 1,
-            "jumlah": 3,
-            "dosis": "1 kali sehari",
-            "aturan_pakai": "Sebelum tidur"
-        }
-    ]
-
-    model = RekamMedisModel()
-
-    hasil = model.create_resep_dokter(
-        25, 21, daftar_resep
-    )
-
-    assert hasil is False
+    assert _model().create_resep_dokter(25, 21, daftar) is False
     conn.rollback.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_resep_dokter_update_status_gagal(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, cursor = _db(mock_db, rowcount=0)
+    cursor.fetchone.side_effect = [_rekam_medis(), _obat()]
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
+    assert _model().create_resep_dokter(
+        25, 21, [_resep()]
+    ) is False
 
-    cursor.fetchone.side_effect = [
-        {
-            "id_rekam_medis": 25,
-            "id_kunjungan": 10
-        },
-        {
-            "id_obat": 1,
-            "stok": 100
-        }
-    ]
-    cursor.rowcount = 0
-
-    daftar_resep = [
-        {
-            "id_obat": 1,
-            "jumlah": 5,
-            "dosis": "2 kali sehari",
-            "aturan_pakai": "Sesudah makan"
-        }
-    ]
-
-    model = RekamMedisModel()
-
-    hasil = model.create_resep_dokter(
-        25, 21, daftar_resep
-    )
-
-    assert hasil is False
     conn.rollback.assert_called_once()
     conn.commit.assert_not_called()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_create_resep_dokter_error_database(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, _ = _db(mock_db, error=Exception("Database error"))
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.execute.side_effect = Exception("Database error")
+    assert _model().create_resep_dokter(
+        25, 21, [_resep()]
+    ) is False
 
-    model = RekamMedisModel()
-
-    hasil = model.create_resep_dokter(
-        25,
-        21,
-        [
-            {
-                "id_obat": 1,
-                "jumlah": 5,
-                "dosis": "2 kali sehari",
-                "aturan_pakai": "Sesudah makan"
-            }
-        ]
-    )
-
-    assert hasil is False
     conn.rollback.assert_called_once()
     conn.close.assert_called_once()
 
 
-# =========================================================
 # SELESAIKAN KUNJUNGAN TANPA RESEP
-# =========================================================
-
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_selesaikan_tanpa_resep_berhasil(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, cursor = _db(mock_db, rowcount=1)
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.rowcount = 1
-
-    model = RekamMedisModel()
-
-    hasil = model.selesaikan_tanpa_resep(25, 21)
-
-    assert hasil is True
+    assert _model().selesaikan_tanpa_resep(25, 21) is True
     cursor.execute.assert_called_once()
     conn.commit.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_selesaikan_tanpa_resep_gagal(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, _ = _db(mock_db, rowcount=0)
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.rowcount = 0
-
-    model = RekamMedisModel()
-
-    hasil = model.selesaikan_tanpa_resep(25, 99)
-
-    assert hasil is False
+    assert _model().selesaikan_tanpa_resep(25, 99) is False
     conn.commit.assert_called_once()
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_selesaikan_tanpa_resep_koneksi_gagal(mock_db):
     mock_db.return_value = None
-
-    model = RekamMedisModel()
-
-    hasil = model.selesaikan_tanpa_resep(25, 21)
-
-    assert hasil is False
+    assert _model().selesaikan_tanpa_resep(25, 21) is False
 
 
-@patch("models.rekam_medis_model.Database.get_connection")
+@patch(DB)
 def test_selesaikan_tanpa_resep_error_database(mock_db):
-    conn = MagicMock()
-    cursor = MagicMock()
+    conn, cursor = _db(mock_db, error=Exception("Database error"))
 
-    mock_db.return_value = conn
-    conn.cursor.return_value = cursor
-    cursor.execute.side_effect = Exception("Database error")
-
-    model = RekamMedisModel()
-
-    hasil = model.selesaikan_tanpa_resep(25, 21)
-
-    assert hasil is False
+    assert _model().selesaikan_tanpa_resep(25, 21) is False
     conn.rollback.assert_called_once()
     cursor.close.assert_called_once()
     conn.close.assert_called_once()
