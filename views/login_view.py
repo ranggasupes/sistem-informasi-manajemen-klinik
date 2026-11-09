@@ -2,6 +2,10 @@
 import customtkinter as ctk
 from tkinter import messagebox
 
+import traceback
+import sys
+from pathlib import Path
+
 from controllers.auth_controller import AuthController
 from views.dashboard_view import (
     DashboardAdminFrame,
@@ -26,6 +30,31 @@ class LoginView(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         self.tampilkan_form_login()
+
+    def catat_tahap(self, pesan):
+        if getattr(sys, "frozen", False):
+            lokasi = Path(sys.executable).resolve().parent
+        else:
+            lokasi = Path(__file__).resolve().parent.parent
+
+        file_log = lokasi / "debug_login.log"
+
+        with open(file_log, "a", encoding="utf-8") as file:
+            file.write(pesan + "\n")
+            file.flush()
+
+    def catat_error(self):
+        if getattr(sys, "frozen", False):
+            lokasi = Path(sys.executable).resolve().parent
+        else:
+            lokasi = Path(__file__).resolve().parent.parent
+
+        file_log = lokasi / "debug_login.log"
+
+        with open(file_log, "a", encoding="utf-8") as file:
+            file.write("\n" + "=" * 60 + "\n")
+            file.write(traceback.format_exc())
+            file.write("\n")
 
     def tampilkan_form_login(self):
 
@@ -97,21 +126,36 @@ class LoginView(ctk.CTk):
         self.entry_username.focus()
 
     def proses_login(self):
+        try:
+            self.catat_tahap("TAHAP 1: Tombol login ditekan")
 
-        username = self.entry_username.get().strip()
-        password = self.entry_password.get()
+            username = self.entry_username.get().strip()
+            password = self.entry_password.get()
 
-        berhasil, hasil = self.auth_controller.login(
-            username,
-            password
-        )
+            self.catat_tahap("TAHAP 2: Data login berhasil dibaca")
 
-        if not berhasil:
-            messagebox.showerror("Login Gagal", hasil)
-            return
+            berhasil, hasil = self.auth_controller.login(username, password)
 
-        self.tampilkan_dashboard(username, hasil)
+            self.catat_tahap("TAHAP 3: Proses autentikasi selesai")
 
+            if not berhasil:
+                messagebox.showerror("Login Gagal", hasil)
+                return
+
+            self.catat_tahap("TAHAP 4: Mulai membuka dashboard")
+
+            self.tampilkan_dashboard(username, hasil)
+
+            self.catat_tahap("TAHAP 5: Dashboard berhasil dibuka")
+
+        except Exception:
+            self.catat_error()
+
+            messagebox.showerror(
+                "Terjadi Kesalahan",
+                "Terjadi kesalahan. Periksa debug_login.log."
+            )
+            
     def tampilkan_dashboard(self, username, user):
 
         for widget in self.winfo_children():

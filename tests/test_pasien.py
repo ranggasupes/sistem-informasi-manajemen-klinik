@@ -7,10 +7,6 @@ import controllers.pasien_controller as pasien_module
 from controllers.pasien_controller import PasienController
 
 
-# ==========================================
-# TEST PASIEN MODEL
-# ==========================================
-
 @patch("models.pasien_model.Database.get_connection")
 def test_create_pasien_berhasil(mock_get_connection):
     mock_conn = MagicMock()

@@ -1,9 +1,9 @@
-
 import mysql.connector
 from mysql.connector import Error
 
 
 class Database:
+
     HOST = "localhost"
     USER = "root"
     PASSWORD = ""
@@ -16,7 +16,8 @@ class Database:
                 host=Database.HOST,
                 user=Database.USER,
                 password=Database.PASSWORD,
-                database=Database.DATABASE
+                database=Database.DATABASE,
+                use_pure=True
             )
 
             return connection

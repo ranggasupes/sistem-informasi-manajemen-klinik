@@ -1,176 +1,102 @@
+
 from config.database import Database
 
 
 class RekamMedisModel:
 
-    def get_all_rekam_medis(self):
+    def _koneksi(self, dictionary=True):
         connection = Database.get_connection()
-
         if connection is None:
-            return []
+            return None, None
+        return connection, connection.cursor(dictionary=dictionary)
 
-        cursor = None
-
-        try:
-            cursor = connection.cursor(dictionary=True)
-
-            query = """
-                SELECT
-                    rm.id_rekam_medis,
-                    rm.id_kunjungan,
-                    rm.tekanan_darah,
-                    rm.suhu_tubuh,
-                    rm.berat_badan,
-                    rm.diagnosis,
-                    rm.catatan,
-                    rm.tanggal_pemeriksaan,
-                    p.nama_pasien
-                FROM rekam_medis rm
-                JOIN kunjungan k
-                    ON rm.id_kunjungan = k.id_kunjungan
-                JOIN pasien p
-                    ON k.id_pasien = p.id_pasien
-                ORDER BY rm.tanggal_pemeriksaan DESC
-            """
-
-            cursor.execute(query)
-            return cursor.fetchall()
-
-        except Exception as e:
-            print(f"Error mengambil data rekam medis: {e}")
-            return []
-
-        finally:
-            if cursor:
-                cursor.close()
+    def _tutup(self, connection, cursor):
+        if cursor:
+            cursor.close()
+        if connection:
             connection.close()
 
-    def create_rekam_medis(
-        self,
-        id_kunjungan,
-        tekanan_darah,
-        suhu_tubuh,
-        berat_badan,
-        diagnosis,
-        catatan
-    ):
-        connection = Database.get_connection()
-
-        if connection is None:
-            return False
-
-        cursor = None
+    def get_all_rekam_medis(self):
+        connection, cursor = self._koneksi()
+        if not connection:
+            return []
 
         try:
-            cursor = connection.cursor()
+            cursor.execute("""
+                SELECT rm.*, p.nama_pasien
+                FROM rekam_medis rm
+                JOIN kunjungan k ON rm.id_kunjungan = k.id_kunjungan
+                JOIN pasien p ON k.id_pasien = p.id_pasien
+                ORDER BY rm.tanggal_pemeriksaan DESC
+            """)
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error mengambil rekam medis: {e}")
+            return []
+        finally:
+            self._tutup(connection, cursor)
 
-            query = """
-                INSERT INTO rekam_medis (
-                    id_kunjungan,
-                    tekanan_darah,
-                    suhu_tubuh,
-                    berat_badan,
-                    diagnosis,
-                    catatan
-                )
+    def create_rekam_medis(
+        self, id_kunjungan, tekanan_darah, suhu_tubuh,
+        berat_badan, diagnosis, catatan
+    ):
+        connection, cursor = self._koneksi(False)
+        if not connection:
+            return False
+
+        try:
+            cursor.execute("""
+                INSERT INTO rekam_medis
+                (id_kunjungan, tekanan_darah, suhu_tubuh,
+                 berat_badan, diagnosis, catatan)
                 VALUES (%s, %s, %s, %s, %s, %s)
-            """
-
-            values = (
-                id_kunjungan,
-                tekanan_darah or None,
-                suhu_tubuh or None,
-                berat_badan or None,
-                diagnosis,
-                catatan or None
-            )
-
-            cursor.execute(query, values)
+            """, (
+                id_kunjungan, tekanan_darah or None,
+                suhu_tubuh or None, berat_badan or None,
+                diagnosis, catatan or None
+            ))
             connection.commit()
-
             return True
-
         except Exception as e:
             print(f"Error menyimpan rekam medis: {e}")
             connection.rollback()
             return False
-
         finally:
-            if cursor:
-                cursor.close()
-            connection.close()
+            self._tutup(connection, cursor)
 
     def get_history_by_user_id(self, id_user):
-        connection = Database.get_connection()
-
-        if connection is None:
+        connection, cursor = self._koneksi()
+        if not connection:
             return []
 
-        cursor = None
-
         try:
-            cursor = connection.cursor(dictionary=True)
-
-            query = """
-                SELECT
-                    rm.id_rekam_medis,
-                    rm.id_kunjungan,
-                    rm.tekanan_darah,
-                    rm.suhu_tubuh,
-                    rm.berat_badan,
-                    rm.diagnosis,
-                    rm.catatan,
-                    rm.tanggal_pemeriksaan,
-                    k.nomor_antrian,
-                    k.tanggal_kunjungan,
-                    po.nama_poli,
-                    d.nama_dokter
+            cursor.execute("""
+                SELECT rm.*, k.nomor_antrian, k.tanggal_kunjungan,
+                       po.nama_poli, d.nama_dokter
                 FROM rekam_medis rm
-                JOIN kunjungan k
-                    ON rm.id_kunjungan = k.id_kunjungan
-                JOIN pasien p
-                    ON k.id_pasien = p.id_pasien
-                JOIN poli po
-                    ON k.id_poli = po.id_poli
-                LEFT JOIN dokter d
-                    ON k.id_dokter = d.id_dokter
+                JOIN kunjungan k ON rm.id_kunjungan = k.id_kunjungan
+                JOIN pasien p ON k.id_pasien = p.id_pasien
+                JOIN poli po ON k.id_poli = po.id_poli
+                LEFT JOIN dokter d ON k.id_dokter = d.id_dokter
                 WHERE p.id_user = %s
                 ORDER BY rm.tanggal_pemeriksaan DESC
-            """
-
-            cursor.execute(query, (id_user,))
+            """, (id_user,))
             return cursor.fetchall()
-
         except Exception as e:
-            print(f"Error mengambil riwayat medis pasien: {e}")
+            print(f"Error mengambil riwayat pasien: {e}")
             return []
-
         finally:
-            if cursor:
-                cursor.close()
-            connection.close()
+            self._tutup(connection, cursor)
 
     def create_rekam_medis_dokter(
-        self,
-        id_kunjungan,
-        id_user,
-        tekanan_darah,
-        suhu_tubuh,
-        berat_badan,
-        diagnosis,
-        catatan
+        self, id_kunjungan, id_user, tekanan_darah,
+        suhu_tubuh, berat_badan, diagnosis, catatan
     ):
-        connection = Database.get_connection()
-
-        if connection is None:
+        connection, cursor = self._koneksi()
+        if not connection:
             return None
 
-        cursor = None
-
         try:
-            cursor = connection.cursor(dictionary=True)
-
-            # Pastikan kunjungan milik dokter yang sedang login
             cursor.execute("""
                 SELECT k.id_kunjungan
                 FROM kunjungan k
@@ -181,70 +107,46 @@ class RekamMedisModel:
                 FOR UPDATE
             """, (id_kunjungan, id_user))
 
-            kunjungan = cursor.fetchone()
-
-            if not kunjungan:
+            if not cursor.fetchone():
                 connection.rollback()
                 return None
 
-            # Simpan hasil pemeriksaan
             cursor.execute("""
-                INSERT INTO rekam_medis (
-                    id_kunjungan,
-                    tekanan_darah,
-                    suhu_tubuh,
-                    berat_badan,
-                    diagnosis,
-                    catatan
-                ) VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO rekam_medis
+                (id_kunjungan, tekanan_darah, suhu_tubuh,
+                 berat_badan, diagnosis, catatan)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """, (
-                id_kunjungan,
-                tekanan_darah or None,
-                suhu_tubuh or None,
-                berat_badan or None,
-                diagnosis,
-                catatan or None
+                id_kunjungan, tekanan_darah or None,
+                suhu_tubuh or None, berat_badan or None,
+                diagnosis, catatan or None
             ))
 
             id_rekam_medis = cursor.lastrowid
-
             connection.commit()
-
-            # Kembalikan ID untuk digunakan pada form resep
             return id_rekam_medis
 
         except Exception as e:
-            print(f"Error menyimpan rekam medis: {e}")
+            print(f"Error menyimpan pemeriksaan: {e}")
             connection.rollback()
             return None
-
         finally:
-            if cursor:
-                cursor.close()
-            connection.close()
+            self._tutup(connection, cursor)
 
     def create_resep_dokter(self, id_rekam_medis, id_user, daftar_resep):
-        connection = Database.get_connection()
-
-        if connection is None:
+        connection, cursor = self._koneksi()
+        if not connection:
             return False
-
-        cursor = None
 
         try:
             if not daftar_resep:
                 return False
 
-            cursor = connection.cursor(dictionary=True)
-
-            # Pastikan rekam medis milik dokter yang sedang login
             cursor.execute("""
                 SELECT rm.id_rekam_medis, k.id_kunjungan
                 FROM rekam_medis rm
-                JOIN kunjungan k
-                    ON rm.id_kunjungan = k.id_kunjungan
-                JOIN dokter d
-                    ON k.id_dokter = d.id_dokter
+                JOIN kunjungan k ON rm.id_kunjungan = k.id_kunjungan
+                JOIN dokter d ON k.id_dokter = d.id_dokter
                 WHERE rm.id_rekam_medis = %s
                   AND d.id_user = %s
                   AND k.status = 'Diperiksa'
@@ -252,7 +154,6 @@ class RekamMedisModel:
             """, (id_rekam_medis, id_user))
 
             rekam_medis = cursor.fetchone()
-
             if not rekam_medis:
                 connection.rollback()
                 return False
@@ -263,58 +164,35 @@ class RekamMedisModel:
                 id_obat = int(resep["id_obat"])
                 jumlah = int(resep["jumlah"])
                 dosis = resep["dosis"].strip()
-                aturan_pakai = resep["aturan_pakai"].strip()
+                aturan = resep["aturan_pakai"].strip()
 
-                if jumlah <= 0 or not dosis or not aturan_pakai:
+                if jumlah <= 0 or not dosis or not aturan:
                     raise ValueError("Data resep belum lengkap.")
 
                 if id_obat in obat_dipilih:
-                    raise ValueError("Obat yang sama tidak boleh dimasukkan dua kali.")
-
+                    raise ValueError("Obat tidak boleh duplikat.")
                 obat_dipilih.add(id_obat)
 
-                # Periksa keberadaan obat dan ketersediaan stok
                 cursor.execute("""
-                    SELECT id_obat, stok
-                    FROM obat
-                    WHERE id_obat = %s
-                    FOR UPDATE
+                    SELECT stok FROM obat
+                    WHERE id_obat = %s FOR UPDATE
                 """, (id_obat,))
-
                 obat = cursor.fetchone()
 
-                if not obat:
-                    raise ValueError(f"Obat ID {id_obat} tidak ditemukan.")
+                if not obat or jumlah > obat["stok"]:
+                    raise ValueError("Obat tidak ditemukan atau stok kurang.")
 
-                if jumlah > obat["stok"]:
-                    raise ValueError(
-                        f"Stok obat ID {id_obat} tidak mencukupi."
-                    )
-
-                # Simpan resep, stok belum dikurangi
                 cursor.execute("""
-                    INSERT INTO resep (
-                        id_rekam_medis,
-                        id_obat,
-                        dosis,
-                        jumlah,
-                        aturan_pakai,
-                        status_penyerahan
-                    ) VALUES (%s, %s, %s, %s, %s, 'Menunggu')
-                """, (
-                    id_rekam_medis,
-                    id_obat,
-                    dosis,
-                    jumlah,
-                    aturan_pakai
-                ))
+                    INSERT INTO resep
+                    (id_rekam_medis, id_obat, dosis, jumlah,
+                     aturan_pakai, status_penyerahan)
+                    VALUES (%s, %s, %s, %s, %s, 'Menunggu')
+                """, (id_rekam_medis, id_obat, dosis, jumlah, aturan))
 
-            # Kunjungan menunggu penyerahan obat
             cursor.execute("""
                 UPDATE kunjungan
                 SET status = 'Menunggu Obat'
-                WHERE id_kunjungan = %s
-                  AND status = 'Diperiksa'
+                WHERE id_kunjungan = %s AND status = 'Diperiksa'
             """, (rekam_medis["id_kunjungan"],))
 
             if cursor.rowcount != 1:
@@ -327,51 +205,60 @@ class RekamMedisModel:
             print(f"Error menyimpan resep: {e}")
             connection.rollback()
             return False
-
         finally:
-            if cursor:
-                cursor.close()
-            connection.close()
+            self._tutup(connection, cursor)
 
     def selesaikan_tanpa_resep(self, id_rekam_medis, id_user):
-        connection = Database.get_connection()
-
-        if connection is None:
+        connection, cursor = self._koneksi(False)
+        if not connection:
             return False
 
-        cursor = None
-
         try:
-            cursor = connection.cursor()
-
             cursor.execute("""
                 UPDATE kunjungan k
-                JOIN rekam_medis rm
-                    ON k.id_kunjungan = rm.id_kunjungan
-                JOIN dokter d
-                    ON k.id_dokter = d.id_dokter
+                JOIN rekam_medis rm ON k.id_kunjungan = rm.id_kunjungan
+                JOIN dokter d ON k.id_dokter = d.id_dokter
                 SET k.status = 'Selesai'
                 WHERE rm.id_rekam_medis = %s
                   AND d.id_user = %s
                   AND k.status = 'Diperiksa'
                   AND NOT EXISTS (
-                      SELECT 1
-                      FROM resep r
+                      SELECT 1 FROM resep r
                       WHERE r.id_rekam_medis = rm.id_rekam_medis
                   )
             """, (id_rekam_medis, id_user))
 
             berhasil = cursor.rowcount == 1
             connection.commit()
-
             return berhasil
 
         except Exception as e:
             print(f"Error menyelesaikan kunjungan: {e}")
             connection.rollback()
             return False
-
         finally:
-            if cursor:
-                cursor.close()
-            connection.close()
+            self._tutup(connection, cursor)
+
+    def get_history_by_doctor_id(self, id_user):
+        connection, cursor = self._koneksi()
+        if not connection:
+            return []
+
+        try:
+            cursor.execute("""
+                SELECT rm.*, k.nomor_antrian, k.tanggal_kunjungan,
+                       k.status, p.nama_pasien, po.nama_poli
+                FROM rekam_medis rm
+                JOIN kunjungan k ON rm.id_kunjungan = k.id_kunjungan
+                JOIN pasien p ON k.id_pasien = p.id_pasien
+                JOIN dokter d ON k.id_dokter = d.id_dokter
+                JOIN poli po ON k.id_poli = po.id_poli
+                WHERE d.id_user = %s
+                ORDER BY rm.tanggal_pemeriksaan DESC
+            """, (id_user,))
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error mengambil riwayat dokter: {e}")
+            return []
+        finally:
+            self._tutup(connection, cursor)
