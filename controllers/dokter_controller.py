@@ -45,3 +45,6 @@ class DokterController:
 
     def get_riwayat(self, id_user):
         return self.rekam_medis.get_history_by_doctor_id(id_user)
+
+    def get_rekam_medis(self, id_kunjungan):
+        return self.rekam_medis.get_by_kunjungan(id_kunjungan)

@@ -36,6 +36,25 @@ class RekamMedisModel:
         finally:
             self._tutup(connection, cursor)
 
+    def get_by_kunjungan(self, id_kunjungan):
+        connection, cursor = self._koneksi()
+        if not connection:
+            return None
+
+        try:
+            cursor.execute("""
+                SELECT *
+                FROM rekam_medis
+                WHERE id_kunjungan = %s
+                LIMIT 1
+            """, (id_kunjungan,))
+            return cursor.fetchone()
+        except Exception as e:
+            print(f"Error mengambil rekam medis: {e}")
+            return None
+        finally:
+            self._tutup(connection, cursor)
+
     def create_rekam_medis(
         self, id_kunjungan, tekanan_darah, suhu_tubuh,
         berat_badan, diagnosis, catatan
@@ -112,6 +131,18 @@ class RekamMedisModel:
                 return None
 
             cursor.execute("""
+                SELECT id_rekam_medis
+                FROM rekam_medis
+                WHERE id_kunjungan = %s
+                LIMIT 1
+            """, (id_kunjungan,))
+
+            rekam_medis = cursor.fetchone()
+            if rekam_medis:
+                connection.commit()
+                return rekam_medis["id_rekam_medis"]
+
+            cursor.execute("""
                 INSERT INTO rekam_medis
                 (id_kunjungan, tekanan_darah, suhu_tubuh,
                  berat_badan, diagnosis, catatan)
@@ -180,7 +211,9 @@ class RekamMedisModel:
                 obat = cursor.fetchone()
 
                 if not obat or jumlah > obat["stok"]:
-                    raise ValueError("Obat tidak ditemukan atau stok kurang.")
+                    raise ValueError(
+                        "Obat tidak ditemukan atau stok kurang."
+                    )
 
                 cursor.execute("""
                     INSERT INTO resep

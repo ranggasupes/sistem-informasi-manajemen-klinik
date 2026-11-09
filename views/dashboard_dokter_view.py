@@ -108,19 +108,37 @@ class DashboardDokterFrame(ctk.CTkFrame):
         data = self.controller.mulai_pemeriksaan(
             self.id_kunjungan, self.id_user
         )
+
         if not data:
-            messagebox.showwarning("Peringatan", "Pasien belum dapat diperiksa.")
+            messagebox.showwarning(
+                "Peringatan", "Pasien belum dapat diperiksa."
+            )
             return
+
+        rekam_medis = self.controller.get_rekam_medis(
+            self.id_kunjungan
+        )
+
+        if rekam_medis:
+            self.id_rekam_medis = rekam_medis["id_rekam_medis"]
+            self.daftar_resep = []
+            self.form_resep()
+            return
+
+        self.id_rekam_medis = None
+        self.daftar_resep = []
 
         self.bersihkan()
         self.judul("Pemeriksaan - " + data["nama_pasien"])
+
         ctk.CTkLabel(
             self.konten,
-            text=f"Antrean: {data['nomor_antrian']} | Keluhan: {data['keluhan_awal']}"
-        ).pack(anchor="center", pady=10)
+            text=f"Antrean: {data['nomor_antrian']} | "
+                f"Keluhan: {data['keluhan_awal']}"
+        ).pack(anchor="w")
 
         form = ctk.CTkFrame(self.konten)
-        form.pack(anchor="center", pady=10)
+        form.pack(anchor="w", pady=10)
 
         self.tekanan = self.input(form, "Tekanan Darah")
         self.suhu = self.input(form, "Suhu Tubuh")
@@ -129,9 +147,10 @@ class DashboardDokterFrame(ctk.CTkFrame):
         self.catatan = self.input(form, "Catatan")
 
         ctk.CTkButton(
-            self.konten, text="Simpan Pemeriksaan",
+            self.konten,
+            text="Simpan Pemeriksaan",
             command=self.simpan_pemeriksaan
-        ).pack(anchor="center", pady=10)
+        ).pack(anchor="w")
 
     def simpan_pemeriksaan(self):
         data = {
