@@ -55,31 +55,69 @@ class RekamMedisModel:
         finally:
             self._tutup(connection, cursor)
 
-    def create_rekam_medis(
-        self, id_kunjungan, tekanan_darah, suhu_tubuh,
-        berat_badan, diagnosis, catatan
+    def create_rekam_medis_dokter(
+        self, id_kunjungan, id_user, tekanan_darah,
+        suhu_tubuh, berat_badan, diagnosis, catatan
     ):
-        connection, cursor = self._koneksi(False)
+        connection, cursor = self._koneksi()
         if not connection:
-            return False
+            return None
 
         try:
             cursor.execute("""
+                SELECT k.id_kunjungan
+                FROM kunjungan k
+                JOIN dokter d ON k.id_dokter = d.id_dokter
+                WHERE k.id_kunjungan = %s
+                AND d.id_user = %s
+                AND k.status = 'Diperiksa'
+                FOR UPDATE
+            """, (id_kunjungan, id_user))
+
+            if not cursor.fetchone():
+                connection.rollback()
+                return None
+
+            cursor.execute("""
+                SELECT id_rekam_medis
+                FROM rekam_medis
+                WHERE id_kunjungan = %s
+                LIMIT 1
+            """, (id_kunjungan,))
+
+            rekam_medis = cursor.fetchone()
+
+            if (
+                rekam_medis
+                and rekam_medis.get("id_rekam_medis") is not None
+            ):
+                connection.commit()
+                return rekam_medis["id_rekam_medis"]
+
+            cursor.execute("""
                 INSERT INTO rekam_medis
                 (id_kunjungan, tekanan_darah, suhu_tubuh,
-                 berat_badan, diagnosis, catatan)
+                berat_badan, diagnosis, catatan)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (
-                id_kunjungan, tekanan_darah or None,
-                suhu_tubuh or None, berat_badan or None,
-                diagnosis, catatan or None
+                id_kunjungan,
+                tekanan_darah or None,
+                suhu_tubuh or None,
+                berat_badan or None,
+                diagnosis,
+                catatan or None
             ))
+
+            id_rekam_medis = cursor.lastrowid
+
             connection.commit()
-            return True
+            return id_rekam_medis
+
         except Exception as e:
-            print(f"Error menyimpan rekam medis: {e}")
+            print(f"Error menyimpan pemeriksaan: {e}")
             connection.rollback()
-            return False
+            return None
+
         finally:
             self._tutup(connection, cursor)
 
