@@ -1,14 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_data_files
-from PyInstaller.utils.hooks import collect_submodules
 from PyInstaller.utils.hooks import collect_all
 
 datas = []
 binaries = []
-hiddenimports = ['mysql.connector.plugins.mysql_native_password']
-datas += collect_data_files('mysql.connector.locales')
-hiddenimports += collect_submodules('mysql.connector.plugins')
-tmp_ret = collect_all('mysql.connector')
+hiddenimports = ['mysql.connector']
+tmp_ret = collect_all('customtkinter')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
@@ -37,7 +33,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
