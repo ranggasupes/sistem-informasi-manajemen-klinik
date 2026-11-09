@@ -7,6 +7,18 @@ from controllers.auth_controller import AuthController
 def buat_hash(password):
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
+def test_hash_sha256_konsisten():
+    password = "password123"
+
+    hash_pertama = buat_hash(password)
+    hash_kedua = buat_hash(password)
+
+    assert hash_pertama == hash_kedua
+    assert hash_pertama == hashlib.sha256(
+        password.encode("utf-8")
+    ).hexdigest()
+    assert len(hash_pertama) == 64
+
 
 @patch("controllers.auth_controller.UserModel")
 def test_login_berhasil(mock_user):
