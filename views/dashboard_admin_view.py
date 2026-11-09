@@ -27,7 +27,7 @@ class DashboardAdminFrame(ctk.CTkFrame):
         menu.grid_propagate(False)
 
         ctk.CTkLabel(menu, text="ADMIN APOTEKER",
-                     font=("Arial", 18, "bold")).pack(pady=25)
+                     font=("Arial", 14, "bold")).pack(pady=25)
 
         for teks, fungsi in [
             ("Dashboard", self.dashboard),
@@ -55,7 +55,7 @@ class DashboardAdminFrame(ctk.CTkFrame):
         self.bersihkan()
         ctk.CTkLabel(
             self.area, text=teks, font=("Arial", 22, "bold")
-        ).pack(anchor="w", padx=10, pady=10)
+        ).pack(anchor="center", padx=10, pady=10)
 
     def buat_tabel(self, kolom):
         tabel = ttk.Treeview(
@@ -77,12 +77,12 @@ class DashboardAdminFrame(ctk.CTkFrame):
         ctk.CTkLabel(
             self.area,
             text=f"Selamat datang, {self.username}"
-        ).pack(anchor="w", padx=10, pady=10)
+        ).pack(anchor="center", padx=10, pady=10)
 
         ctk.CTkButton(
             self.area, text="Lihat Antrean Resep",
             command=self.antrean
-        ).pack(anchor="w", padx=10, pady=10)
+        ).pack(anchor="center", padx=10, pady=10)
 
     # ANTREAN RESEP
 
@@ -115,7 +115,7 @@ class DashboardAdminFrame(ctk.CTkFrame):
         ctk.CTkButton(
             self.area, text="Serahkan Obat",
             command=self.serahkan_obat
-        ).pack(anchor="w", padx=10, pady=10)
+        ).pack(anchor="center", padx=10, pady=10)
 
     def serahkan_obat(self):
         pilihan = self.tabel_antrean.selection()

@@ -20,7 +20,11 @@ class DashboardPasienFrame(ctk.CTkFrame):
         menu.grid(row=0, column=0, sticky="ns")
         menu.grid_propagate(False)
 
-        ctk.CTkLabel(menu, text="MENU PASIEN").pack(pady=20)
+        ctk.CTkLabel(
+            menu, 
+            text="MENU PASIEN", 
+            font=("Arial", 15, "bold") 
+        ).pack(pady=20)
 
         for teks, fungsi in [
             ("Dashboard", self.refresh_data),
@@ -32,7 +36,7 @@ class DashboardPasienFrame(ctk.CTkFrame):
             )
 
         ctk.CTkButton(
-            menu, text="Logout", command=self.logout
+            menu, text="Logout", command=self.logout, fg_color="#d9534f", hover_color="#c9302c"
         ).pack(side="bottom", fill="x", padx=10, pady=15)
 
         self.konten = ctk.CTkScrollableFrame(self)
@@ -42,8 +46,8 @@ class DashboardPasienFrame(ctk.CTkFrame):
 
     def judul(self, teks):
         ctk.CTkLabel(
-            self.konten, text=teks, font=("Arial", 18, "bold")
-        ).pack(anchor="w", pady=8)
+            self.konten, text=teks, font=("Arial", 20, "bold"), justify="center"
+        ).pack(anchor="center", pady=(15, 10))
 
     def refresh_data(self):
         for widget in self.konten.winfo_children():
@@ -52,7 +56,7 @@ class DashboardPasienFrame(ctk.CTkFrame):
         self.judul("Dashboard Pasien")
 
         if not self.id_user:
-            ctk.CTkLabel(self.konten, text="Identitas pasien tidak ditemukan.").pack(anchor="w")
+            ctk.CTkLabel(self.konten, text="Identitas pasien tidak ditemukan.").pack(anchor="center", pady=20)
             return
 
         try:
@@ -61,28 +65,38 @@ class DashboardPasienFrame(ctk.CTkFrame):
             if not pasien:
                 ctk.CTkLabel(
                     self.konten, text="Data pasien belum tersedia. Hubungi admin."
-                ).pack(anchor="w")
+                ).pack(anchor="center", pady=20)
                 return
 
             tanggal = pasien["tanggal_lahir"]
             tanggal = tanggal.strftime("%d-%m-%Y") if tanggal else "-"
 
+            # --- CARD 1: IDENTITAS PASIEN ---
+            card_identitas = ctk.CTkFrame(self.konten, corner_radius=10)
+            card_identitas.pack(fill="x", padx=30, pady=10)
+
+            ctk.CTkLabel(
+                card_identitas, text="Identitas Pasien", font=("Arial", 16, "bold")
+            ).pack(anchor="center", pady=(10, 5))
+
             identitas = (
                 f"Nama: {pasien['nama_pasien']}\n"
-                f"NIK: {pasien['nik'] or '-'}\n"
-                f"No. BPJS: {pasien['nomor_bpjs'] or '-'}\n"
-                f"Jenis Kelamin: {pasien['jenis_kelamin'] or '-'}\n"
-                f"Tanggal Lahir: {tanggal}\n"
+                f"NIK: {pasien['nik'] or '-'} | No. BPJS: {pasien['nomor_bpjs'] or '-'}\n"
+                f"Jenis Kelamin: {pasien['jenis_kelamin'] or '-'} | Tgl Lahir: {tanggal}\n"
                 f"Alamat: {pasien['alamat'] or '-'}\n"
                 f"No. Telepon: {pasien['no_telepon'] or '-'}"
             )
-
-            self.judul("Identitas Pasien")
             ctk.CTkLabel(
-                self.konten, text=identitas, justify="left"
-            ).pack(anchor="w", padx=10)
+                card_identitas, text=identitas, justify="center"
+            ).pack(anchor="center", padx=15, pady=(0, 15))
 
-            self.judul("Profil Kesehatan")
+            # --- CARD 2: PROFIL KESEHATAN ---
+            card_profil = ctk.CTkFrame(self.konten, corner_radius=10)
+            card_profil.pack(fill="x", padx=30, pady=10)
+
+            ctk.CTkLabel(
+                card_profil, text="Profil Kesehatan", font=("Arial", 16, "bold")
+            ).pack(anchor="center", pady=(10, 5))
 
             if profil:
                 kesehatan = (
@@ -96,16 +110,26 @@ class DashboardPasienFrame(ctk.CTkFrame):
                 kesehatan = "Profil kesehatan belum tersedia."
 
             ctk.CTkLabel(
-                self.konten, text=kesehatan, justify="left"
-            ).pack(anchor="w", padx=10)
+                card_profil, text=kesehatan, justify="center"
+            ).pack(anchor="center", padx=15, pady=(0, 15))
 
-            self.judul("Antrean Kunjungan")
+            # --- CARD 3: ANTREAN KUNJUNGAN ---
+            card_antrean = ctk.CTkFrame(self.konten, corner_radius=10)
+            card_antrean.pack(fill="x", padx=30, pady=10)
+
+            ctk.CTkLabel(
+                card_antrean, text="Antrean Kunjungan", font=("Arial", 16, "bold")
+            ).pack(anchor="center", pady=(10, 5))
+
+            self.frame_antrean_konten = ctk.CTkLabel(card_antrean, text="", justify="center")
+            self.frame_antrean_konten.pack(anchor="center", padx=15, pady=(0, 10))
             self.refresh_antrean()
 
+            # --- TOMBOL DAFTAR KUNJUNGAN ---
             ctk.CTkButton(
                 self.konten, text="Daftar Kunjungan",
-                command=self.buka_form_pendaftaran
-            ).pack(anchor="w", pady=10)
+                command=self.buka_form_pendaftaran, width=220, height=35
+            ).pack(anchor="center", pady=20)
 
         except Exception as e:
             messagebox.showerror("Gagal Memuat Data", str(e))
@@ -121,15 +145,13 @@ class DashboardPasienFrame(ctk.CTkFrame):
 
             teks = (
                 f"Nomor Antrean: {kunjungan['nomor_antrian']}\n"
-                f"Poli: {kunjungan['nama_poli']}\n"
-                f"Tanggal: {tanggal}\n"
+                f"Poli: {kunjungan['nama_poli']} | Tanggal: {tanggal}\n"
                 f"Status: {kunjungan['status']}\n"
                 f"Dokter: {kunjungan['nama_dokter'] or 'Belum ditentukan'}"
             )
 
-        ctk.CTkLabel(
-            self.konten, text=teks, justify="left"
-        ).pack(anchor="w", padx=10)
+        if hasattr(self, 'frame_antrean_konten') and self.frame_antrean_konten.winfo_exists():
+            self.frame_antrean_konten.configure(text=teks)
 
     def buka_form_pendaftaran(self):
         if not self.id_user:
@@ -193,11 +215,19 @@ class DashboardPasienFrame(ctk.CTkFrame):
             window = ctk.CTkToplevel(self)
             window.title("Riwayat Medis")
             window.geometry("950x500")
+            window.grab_set()
 
             ctk.CTkLabel(
                 window, text="Riwayat Rekam Medis",
                 font=("Arial", 18, "bold")
             ).pack(pady=15)
+
+            if not data:
+                ctk.CTkLabel(
+                    window, text="Belum ada riwayat pemeriksaan.",
+                    font=("Arial", 14)
+                ).pack(pady=20)
+                return
 
             kolom = (
                 "tanggal", "poli", "dokter",
@@ -232,11 +262,6 @@ class DashboardPasienFrame(ctk.CTkFrame):
                 ))
 
             tabel.pack(fill="both", expand=True, padx=10, pady=10)
-
-            if not data:
-                ctk.CTkLabel(
-                    window, text="Belum ada riwayat pemeriksaan."
-                ).pack(pady=5)
 
         except Exception as e:
             messagebox.showerror("Gagal", str(e))

@@ -37,7 +37,7 @@ class DashboardDokterFrame(ctk.CTkFrame):
 
     def judul(self, teks):
         ctk.CTkLabel(self.konten, text=teks, font=("Arial", 20)).pack(
-            anchor="w", pady=10
+            anchor="center", pady=10
         )
 
     def input(self, parent, label):
@@ -58,7 +58,7 @@ class DashboardDokterFrame(ctk.CTkFrame):
         self.judul("Dashboard Dokter")
         ctk.CTkButton(
             self.konten, text="Lihat Antrean", command=self.tampilkan_antrean
-        ).pack(anchor="w")
+        ).pack(anchor="center", pady=10)
 
     def tampilkan_antrean(self):
         self.bersihkan()
@@ -117,10 +117,10 @@ class DashboardDokterFrame(ctk.CTkFrame):
         ctk.CTkLabel(
             self.konten,
             text=f"Antrean: {data['nomor_antrian']} | Keluhan: {data['keluhan_awal']}"
-        ).pack(anchor="w")
+        ).pack(anchor="center", pady=10)
 
         form = ctk.CTkFrame(self.konten)
-        form.pack(anchor="w", pady=10)
+        form.pack(anchor="center", pady=10)
 
         self.tekanan = self.input(form, "Tekanan Darah")
         self.suhu = self.input(form, "Suhu Tubuh")
@@ -131,7 +131,7 @@ class DashboardDokterFrame(ctk.CTkFrame):
         ctk.CTkButton(
             self.konten, text="Simpan Pemeriksaan",
             command=self.simpan_pemeriksaan
-        ).pack(anchor="w")
+        ).pack(anchor="center", pady=10)
 
     def simpan_pemeriksaan(self):
         data = {
